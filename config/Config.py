@@ -11,6 +11,9 @@ import ctypes
 import json
 import numpy as np
 import copy
+from intbitset import intbitset
+
+from config.adjlist import AdjList
 
 def to_var(x, use_gpu):
     if use_gpu:
@@ -126,6 +129,9 @@ class Config(object):
         self.lib.setInPath(
             ctypes.create_string_buffer(self.in_path.encode(), len(self.in_path) * 2)
         )
+        print(f"Inpath: {self.in_path}")
+        self.adjList = AdjList(self.in_path)
+
         self.lib.setBern(self.bern)
         self.lib.setWorkThreads(self.work_threads)
         self.lib.randReset()
@@ -349,6 +355,14 @@ class Config(object):
             self.negative_ent,
             self.negative_rel,
         )
+        # We need to append the neighbors from here!
+        h = intbitset(self.batch_h.tolist())
+        t = intbitset(self.batch_t.tolist())
+        ht = h | t
+        neighbors, inv_degrees = self.adjList[ht.tolist()]
+
+        return neighbors, inv_degrees
+
 
     def save_checkpoint(self, model, epoch):
         path = os.path.join(
@@ -360,13 +374,23 @@ class Config(object):
         path = os.path.join(self.result_dir, self.model.__name__ + ".ckpt")
         torch.save(best_model, path)
 
-    def train_one_step(self):
+    def train_one_step(self, neighbors, inv_degrees):
         self.trainModel.batch_h = to_var(self.batch_h, self.use_gpu)
         self.trainModel.batch_t = to_var(self.batch_t, self.use_gpu)
         self.trainModel.batch_r = to_var(self.batch_r, self.use_gpu)
         self.trainModel.batch_y = to_var(self.batch_y, self.use_gpu)
         self.optimizer.zero_grad()
         loss = self.trainModel()
+
+        # Neighbors now!!
+        self.trainModel.batch_h = to_var(neighbors[:, 0], self.use_gpu)
+        self.trainModel.batch_t = to_var(neighbors[:, 1], self.use_gpu)
+        self.trainModel.batch_r = to_var(neighbors[:, 2], self.use_gpu)
+        self.trainModel.batch_y = to_var(np.ones(inv_degrees.shape, dtype=np.float32), self.use_gpu)
+        inv_degrees = to_var(inv_degrees, self.use_gpu)
+        loss_nh = self.trainModel(inv_degrees)
+        loss = loss + loss_nh
+
         loss.backward()
         self.optimizer.step()
         return loss.item()
@@ -406,8 +430,8 @@ class Config(object):
         for epoch in range(self.train_times):
             res = 0.0
             for batch in range(self.nbatches):
-                self.sampling()
-                loss = self.train_one_step()
+                neighbors, inv_degrees = self.sampling()
+                loss = self.train_one_step(neighbors, inv_degrees)
                 res += loss
             print("Epoch %d | loss: %f" % (epoch, res))
             if (epoch + 1) % self.save_steps == 0:

@@ -29,14 +29,17 @@ class TransE(Model):
 			y = Variable(torch.Tensor([-1]))
 		return self.criterion(p_score, n_score, y)
 
-	def forward(self):
+	def forward(self, inv_degrees=None):
 		h = self.ent_embeddings(self.batch_h)
 		t = self.ent_embeddings(self.batch_t)
 		r = self.rel_embeddings(self.batch_r)
-		score = self._calc(h ,t, r)
+		if inv_degrees is not None:
+			score = self._calc(h ,t, r)*inv_degrees
+		else:
+			score = self._calc(h, t, r)
 		p_score = self.get_positive_score(score)
 		n_score = self.get_negative_score(score)
-		return self.loss(p_score, n_score)	
+		return self.loss(p_score, n_score)
 
 	def predict(self):
 		h = self.ent_embeddings(self.batch_h)

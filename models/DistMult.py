@@ -22,16 +22,19 @@ class DistMult(Model):
 	def _calc(self, h, t, r):
 		return - torch.sum(h * t * r, -1)
 	
-	def loss(self, score, regul):
-		return torch.mean(self.criterion(score * self.batch_y)) + self.config.lmbda * regul 
+	def loss(self, score, regul, inv_degrees=None):
+		if inv_degrees is not None:
+			return torch.mean(inv_degrees*self.criterion(score * self.batch_y)) + self.config.lmbda * regul
+		else:
+			return torch.mean(self.criterion(score * self.batch_y)) + self.config.lmbda * regul
 
-	def forward(self):
+	def forward(self, inv_degrees=None):
 		h = self.ent_embeddings(self.batch_h)
 		t = self.ent_embeddings(self.batch_t)
 		r = self.rel_embeddings(self.batch_r)
 		score = self._calc(h ,t, r)
 		regul = torch.mean(h ** 2) + torch.mean(t ** 2) + torch.mean(r ** 2)
-		return self.loss(score, regul)	
+		return self.loss(score, regul, inv_degrees)
 
 	def predict(self):
 		h = self.ent_embeddings(self.batch_h)
