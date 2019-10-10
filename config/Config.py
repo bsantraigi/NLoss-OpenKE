@@ -421,6 +421,11 @@ class Config(object):
         return self.lib.getValidHit10()
 
     def train(self):
+        print("alph:", self.alpha)
+        print("nbatches:", self.nbatches)
+        print("negative sampl rate:", self.negative_ent)
+        print("dimension:", self.hidden_size, self.ent_size, self.rel_size)
+        
         if not os.path.exists(self.checkpoint_dir):
             os.mkdir(self.checkpoint_dir)
         best_epoch = 0

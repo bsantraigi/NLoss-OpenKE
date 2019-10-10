@@ -3,18 +3,19 @@ from  models_old import *
 import json
 import os
 data = "FB15K237"
+# data = "WN18RR"
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 con = config.Config()
 con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
 con.set_work_threads(8)
 con.set_train_times(1000)
-con.set_nbatches(1000)	
-con.set_alpha(0.1)
+con.set_nbatches(100)	
+con.set_alpha(0.01)
 con.set_bern(0)
 con.set_dimension(100)
 con.set_margin(1.0)
-con.set_ent_neg_rate(5)
+con.set_ent_neg_rate(10)
 con.set_rel_neg_rate(0)
 con.set_opt_method("adagrad")
 con.set_save_steps(10)
