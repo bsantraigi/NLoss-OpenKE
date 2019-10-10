@@ -11,11 +11,19 @@ con.set_in_path(f"./benchmarks/{data}/")
 con.set_work_threads(8)
 con.set_train_times(1000)
 con.set_nbatches(100)	
-con.set_alpha(0.1)
+con.set_alpha(0.01)
 con.set_bern(0)
-con.set_dimension(100)
+if data == "WN18RR":
+    con.set_dimension(300)
+else:
+    con.set_dimension(100)
 con.set_margin(1.0)
-con.set_ent_neg_rate(1)
+if data == "FB15K237":
+    con.set_ent_neg_rate(3)  
+elif data == "WN18RR":
+    con.set_ent_neg_rate(5)
+else:
+    con.set_ent_neg_rate(1)
 con.set_rel_neg_rate(0)
 con.set_opt_method("adagrad")
 con.set_save_steps(10)
