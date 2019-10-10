@@ -2,14 +2,14 @@ import config_old as config
 from  models_old import *
 import json
 import os
-data = "WN18RR"
+data = "FB15K237"
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 con = config.Config()
 con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
 con.set_work_threads(8)
 con.set_train_times(1000)
-con.set_nbatches(100)	
+con.set_nbatches(1000)	
 con.set_alpha(0.001)
 con.set_bern(0)
 con.set_dimension(100)
