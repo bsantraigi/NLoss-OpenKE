@@ -37,6 +37,7 @@ class TransE(Model):
 			score = self._calc(h ,t, r)*inv_degrees
 		else:
 			score = self._calc(h, t, r)
+
 		p_score = self.get_positive_score(score)
 		n_score = self.get_negative_score(score)
 		return self.loss(p_score, n_score)

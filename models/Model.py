@@ -27,13 +27,17 @@ class Model(nn.Module):
 		return self.negative_h, self.negative_t, self.negative_r
  	'''
 	def get_positive_score(self, score):
-		return score[0:self.config.batch_size]
+		# return score[0:self.config.batch_size]
+		return score[self.batch_y == 1]
 
 	def get_negative_score(self, score):
-		negative_score = score[self.config.batch_size:self.config.batch_seq_size]
-		negative_score = negative_score.view(-1, self.config.batch_size)
-		negative_score = torch.mean(negative_score, 0)
+		negative_score = score[self.batch_y == -1]
+		# negative_score = score[self.config.batch_size:self.config.batch_seq_size]
+		if self.batch_y.sum() != 0:
+			negative_score = negative_score.view(-1, self.config.batch_size)
+			negative_score = torch.mean(negative_score, 0)
 		return negative_score
+
 	def forward(self):
 		raise NotImplementedError
 	

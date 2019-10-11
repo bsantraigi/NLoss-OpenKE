@@ -8,3 +8,4 @@ from .ComplEx import ComplEx
 from .RESCAL import RESCAL
 from .Analogy import Analogy
 from .SimplE import SimplE
+from .TransESoftLoss import TransESoftLoss
