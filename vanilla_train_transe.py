@@ -1,5 +1,5 @@
 import config_old as config
-from  models_old import *
+from models_old import *
 import json
 import os
 # data = "WN18RR"
@@ -8,14 +8,14 @@ os.environ['CUDA_VISIBLE_DEVICES']='1'
 con = config.Config()
 con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
-con.set_work_threads(8)
+con.set_work_threads(24)
 con.set_train_times(1000)
 con.set_nbatches(100)
-con.set_alpha(0.001)
+con.set_alpha(0.005)
 con.set_bern(0)
-con.set_dimension(100)
+con.set_dimension(512)
 con.set_margin(1.0)
-con.set_ent_neg_rate(3)
+con.set_ent_neg_rate(5)
 con.set_rel_neg_rate(0)
 # con.set_opt_method("SGD")
 con.set_opt_method("adagrad")
@@ -27,5 +27,6 @@ con.set_result_dir(f"./result/{data}")
 con.set_test_link(True)
 con.set_test_triple(True)
 con.init()
+# con.set_train_model(TransE)
 con.set_train_model(TransESoftLoss)
 con.train()
