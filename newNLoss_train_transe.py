@@ -2,8 +2,8 @@ import config_fix as config
 from models import *
 import json
 import os
-# data = "WN18RR"
-data = "FB15K237"
+data = "WN18RR"
+# data = "FB15K237"
 os.environ['CUDA_VISIBLE_DEVICES']='1'
 con = config.Config()
 con.set_use_gpu(True)
