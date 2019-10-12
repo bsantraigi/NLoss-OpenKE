@@ -10,13 +10,13 @@ con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
 con.set_work_threads(12)
 con.set_train_times(1000)
-con.set_nbatches(100)
+con.set_nbatches(400)
 con.set_alpha(0.005)
 con.set_bern(0)
 if data == "WN18RR":
     con.set_dimension(500)
 else:
-    con.set_dimension(100)
+    con.set_dimension(500)
 con.set_margin(1.0)
 
 if data == "WN18RR":

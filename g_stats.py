@@ -110,7 +110,7 @@ class AdjList():
             getter = itemgetter(*index)
             NS = np.concatenate(getter(self.adjlist), 0)
             inv_deg = np.concatenate(getter(self.degrees))
-            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*10]
+            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*20]
             # shuf = np.random.choice(NS.shape[0], len(index)*10, replace=False)
             return NS[shuf], inv_deg[shuf]
         else:
@@ -159,6 +159,7 @@ def main(data):
     plt.savefig(f"plots/fulldata_{data}.png", dpi=300, bbox_inches='tight')
     plt.clf()
 
+    xlim = 20
     # minibatch degree
     def minib(bs):
         degree_hist_super = Counter()
@@ -215,6 +216,7 @@ def main(data):
         minib(200)
         minib_nloss(200)
         minib(1000)
+        minib(1000*20) # for fair comparison
         minib_nloss(1000)
         minib(2000)
         minib_nloss(2000)
