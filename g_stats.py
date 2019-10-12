@@ -110,7 +110,7 @@ class AdjList():
             getter = itemgetter(*index)
             NS = np.concatenate(getter(self.adjlist), 0)
             inv_deg = np.concatenate(getter(self.degrees))
-            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*20]
+            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*self.n_per_e]
             # shuf = np.random.choice(NS.shape[0], len(index)*10, replace=False)
             return NS[shuf], inv_deg[shuf]
         else:
@@ -147,9 +147,13 @@ def main(data):
     if data == "FB15K237":
         # 272115
         xlim = 80
+        ylim = 1
+        adjlist.n_per_e = 10
     elif data == "WN18RR":
         # 86835
         xlim = 20
+        ylim = 1
+        adjlist.n_per_e = 10
 
     # PLOT 1
     plt.hist(total_degrees, bins=max(total_degrees), density=True)
@@ -178,6 +182,7 @@ def main(data):
         # PLOT 2
         plt.bar(keys, counts)
         plt.xlim(0, xlim)
+        #plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
         plt.savefig(f"plots/minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
         plt.clf()
@@ -186,6 +191,7 @@ def main(data):
     def minib_nloss(bs):
         degree_hist_super = Counter()
         num_batches = 1 + len(adjlist.triples) // bs
+        ext_bs = []
         for s in tqdm(range(0, len(adjlist.triples), bs)):
             sub = adjlist.triples[s:(s+bs)]
             hs, ts, _ = list(zip(*sub))
@@ -193,6 +199,9 @@ def main(data):
             sub2 = adjlist[hs+ts][0].tolist()
             
             sub = sub+sub2
+            uniq_sub = np.unique(sub, axis=0)
+            ext_bs.append(len(uniq_sub))
+
             hs, ts, _ = list(zip(*sub))
             
             degree_batch = Counter(hs + ts).values()
@@ -202,10 +211,12 @@ def main(data):
         keys = np.array(list(degree_hist_super.keys()))
         counts = np.array(list(degree_hist_super.values()))/num_batches
         counts = counts/counts.sum()
-
+        print(len(ext_bs))
+        print(f"{data}, Minibatch: {bs}, nl_minibatch: {np.mean(ext_bs)}")
         # PLOT 3
         plt.bar(keys, counts)
         plt.xlim(0, xlim)
+        #plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
         plt.savefig(f"plots/NLoss_minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
         plt.clf()
@@ -213,21 +224,37 @@ def main(data):
 
     if data == "FB15K237":
         # 272115
-        minib(200)
-        minib_nloss(200)
-        minib(1000)
-        minib(1000*20) # for fair comparison
-        minib_nloss(1000)
-        minib(2000)
-        minib_nloss(2000)
-    elif data == "WN18RR":
-        # 86835
-        minib(100)
-        minib_nloss(100)
-        minib(500)
-        minib_nloss(500)
-        minib(1000)
-        minib_nloss(1000)
+        for x in [1000, 2000, 9000, 18000, 30000]:
+            minib(x)
+            # minib_nloss(x)
+
+        for x in [50, 100, 500, 1000, 2000]:
+            minib_nloss(x)
+
+        # minib(200)
+        # minib_nloss(200)
+        # minib(8000)
+        
+        # minib(1000)        
+        # minib_nloss(1000)
+        # minib(40000)
+
+        # minib(2000)
+        # minib_nloss(2000)
+        # minib(80000)
+    # elif data == "WN18RR":
+    #     # 86835
+    #     minib(100)
+    #     minib_nloss(100)
+    #     minib(1800)
+        
+    #     minib(500)        
+    #     minib_nloss(500)
+    #     minib(10000)
+
+    #     minib(1000)
+    #     minib_nloss(1000)
+    #     minib(20000)
 
     # minib(1000)
     # minib_nloss(1000)
@@ -236,4 +263,4 @@ def main(data):
 
 if __name__ == "__main__":
     main("FB15K237")
-    main("WN18RR")
+    # main("WN18RR")
