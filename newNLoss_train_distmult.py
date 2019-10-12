@@ -2,15 +2,15 @@ import config_fix as config
 from models import *
 import json
 import os
-# data = "FB15K237"
-data = "WN18RR"
-os.environ['CUDA_VISIBLE_DEVICES']='0'
+data = "FB15K237"
+# data = "WN18RR"
+os.environ['CUDA_VISIBLE_DEVICES']='1'
 con = config.Config()
 con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
 con.set_work_threads(12)
 con.set_train_times(1000)
-con.set_nbatches(100)
+con.set_nbatches(1000)
 con.set_alpha(0.005)
 con.set_bern(0)
 if data == "WN18RR":

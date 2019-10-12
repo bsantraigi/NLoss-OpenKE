@@ -404,7 +404,7 @@ class Config(object):
             ), self.use_gpu)
 
         if inv_degrees is not None:
-            inv_degrees = np.repeat(inv_degrees, 2)
+            inv_degrees = np.tile(inv_degrees, 2)
             inv_degrees = to_var(inv_degrees, self.use_gpu)
             loss_nh = self.trainModel(inv_degrees)
         else:
