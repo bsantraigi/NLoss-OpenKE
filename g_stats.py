@@ -98,9 +98,10 @@ class AdjList():
         self.inpath = inpath
         self.nE, self.entities = getem(f"{self.inpath}/entity2id.txt")
         self.nR, self.rels = getem(f"{self.inpath}/relation2id.txt")
-        self.nT, self.adjlist, self.degrees = gettripleAdj(f"{self.inpath}/train2id.txt")
-        self.triples = gettriples(f"{self.inpath}/train2id.txt")
-        self.adjmat = getAdjMat(f"{self.inpath}/train2id.txt", self.nE)
+        triple_name = "train2id_nl"
+        self.nT, self.adjlist, self.degrees = gettripleAdj(f"{self.inpath}/{triple_name}.txt")
+        self.triples = gettriples(f"{self.inpath}/{triple_name}.txt")
+        self.adjmat = getAdjMat(f"{self.inpath}/{triple_name}.txt", self.nE)
 
     def __len__(self):
         return len(self.adjlist)
