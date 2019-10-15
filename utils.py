@@ -1,4 +1,4 @@
-def gettriples(path):
+def get_triples(path):
     print("Reading ", path)
     with open(path) as ef:
         nE = int(ef.readline())
@@ -10,3 +10,16 @@ def gettriples(path):
             triples.append((h,r,t))
 
     return triples
+
+def get_list(path):
+    print("Reading ", path)
+    with open(path) as ef:
+        nE = int(ef.readline())
+        print(f"Num Items: {nE}")
+        entities = {}
+        for line in ef:
+            line = line.strip()
+            name,id = line.split("\t")
+            entities[id] = name
+
+    return nE, entities

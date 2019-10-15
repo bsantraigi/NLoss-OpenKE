@@ -1,10 +1,10 @@
 from collections import defaultdict
-from utils import gettriples
+from utils import get_triples
 
-dataset = "FB15K237"
-# dataset = "WN18RR"
+# dataset = "FB15K237"
+dataset = "WN18RR"
 
-train_data = gettriples(f"./benchmarks/{dataset}/train2id.txt")
+train_data = get_triples(f"./benchmarks/{dataset}/train2id.txt")
 
 def simplify_graph():
     with open(f"checkpoint/simple_graph_{dataset}.txt", "w") as f:
@@ -48,6 +48,8 @@ for i, part in enumerate(partitions):
         rev_memberships_2[x] = i
 
 # For wn18rr: use range [10, 45]
+# For FB15k237: use range [4,20]
+
 min_size = 4
 max_size = 20
 for e in list(rev_memberships_1.keys()):

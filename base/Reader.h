@@ -4,7 +4,10 @@
 #include "Triple.h"
 #include <cstdlib>
 #include <algorithm>
-#include <string.h>
+#include <string>
+#include <iostream>
+
+using namespace std;
 
 INT *freqRel, *freqEnt;
 INT *lefHead, *rigHead;
@@ -20,12 +23,12 @@ Triple *trainRel;
 INT *testLef, *testRig;
 INT *validLef, *validRig;
 
-std::string train_fname = "train2id_nl.txt";
+string train_fname = "train2id_nl.txt";
 
 extern "C"
 void importTrainFiles() {
-
 	printf("The toolkit is importing datasets.\n");
+	cout << "Importing data from " << train_fname << endl;
 	FILE *fin;
 	int tmp;
 

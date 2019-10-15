@@ -18,41 +18,15 @@ from operator import itemgetter
 import numpy as np
 from collections import Counter, defaultdict
 from tqdm import tqdm_notebook, tnrange, tqdm
+
 import matplotlib
 import matplotlib.pyplot as plt
-
 font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 18}
 matplotlib.rc('font', **font)
 
-# %matplotlib inline
-
-def getem(path):
-    print("Reading ", path)
-    with open(path) as ef:
-        nE = int(ef.readline())
-        print(f"Num Items: {nE}")
-        entities = {}
-        for line in ef:
-            line = line.strip()
-            name,id = line.split("\t")
-            entities[id] = name
-
-    return nE, entities
-
-def gettriples(path):
-    print("Reading ", path)
-    with open(path) as ef:
-        nE = int(ef.readline())
-        triples = []
-        for line in ef:
-            line = line.strip()
-            h,t,r = line.split(" ")
-            h,t,r = int(h), int(t), int(r)
-            triples.append((h,r,t))
-
-    return triples
+from utils import get_triples, get_list
 
 def gettripleAdj(path):
     with open(path) as ef:
@@ -93,14 +67,14 @@ def getAdjMat(path, nE):
 
 
 class AdjList():
-    def __init__(self, inpath):
+    def __init__(self, inpath, nl=False):
         # super(AdjList, self).__init__()
         self.inpath = inpath
-        self.nE, self.entities = getem(f"{self.inpath}/entity2id.txt")
-        self.nR, self.rels = getem(f"{self.inpath}/relation2id.txt")
-        triple_name = "train2id_nl"
+        self.nE, self.entities = get_list(f"{self.inpath}/entity2id.txt")
+        self.nR, self.rels = get_list(f"{self.inpath}/relation2id.txt")
+        triple_name = "train2id_nl" if nl else "train2id"
         self.nT, self.adjlist, self.degrees = gettripleAdj(f"{self.inpath}/{triple_name}.txt")
-        self.triples = gettriples(f"{self.inpath}/{triple_name}.txt")
+        self.triples = get_triples(f"{self.inpath}/{triple_name}.txt")
         self.adjmat = getAdjMat(f"{self.inpath}/{triple_name}.txt", self.nE)
 
     def __len__(self):
@@ -117,11 +91,9 @@ class AdjList():
         else:
             return self.adjlist[index[0]], self.degrees[index[0]]
 
-
-
 # MAIN
 def main(data):
-    adjlist = AdjList(f"./benchmarks/{data}/")
+    adjlist = AdjList(f"./benchmarks/{data}/", nl=False)
     adjMat1, adjMat2 = adjlist.adjmat
     # print(len(adjlist))
     # print(adjlist[[2]])
@@ -181,11 +153,35 @@ def main(data):
         counts = counts/counts.sum()
 
         # PLOT 2
-        plt.bar(keys, counts)
+        plt.bar(keys, counts, alpha=0.6)
         plt.xlim(0, xlim)
         #plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
-        plt.savefig(f"plots/minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
+        # plt.savefig(f"plots/minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
+        # plt.clf()
+
+    def minib_community(bs):
+        triples_nl = get_triples(f"benchmarks/{data}/train2id_nl.txt")
+        degree_hist_super = Counter()
+        num_batches = 1 + len(triples_nl) // bs
+        for s in tqdm(range(0, len(triples_nl), bs)):
+            sub = triples_nl[s:(s+bs)]
+            hs, ts, _ = list(zip(*sub))
+            degree_batch = Counter(hs + ts).values()
+            degree_hist = Counter(degree_batch)
+            degree_hist_super += degree_hist
+
+        keys = np.array(list(degree_hist_super.keys()))
+        counts = np.array(list(degree_hist_super.values()))/num_batches
+        counts = counts/counts.sum()
+
+        # PLOT 2
+        plt.bar(keys, counts, alpha=0.6)
+        plt.xlim(0, xlim)
+        # plt.ylim(0, ylim)
+        plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
+        plt.legend(["Minibatch", "Community-Minibatch"])
+        plt.savefig(f"plots/community_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
         plt.clf()
 
     # minibatch degree with NLoss
@@ -215,53 +211,40 @@ def main(data):
         print(len(ext_bs))
         print(f"{data}, Minibatch: {bs}, nl_minibatch: {np.mean(ext_bs)}")
         # PLOT 3
-        plt.bar(keys, counts)
+        plt.bar(keys, counts, alpha=0.5)
         plt.xlim(0, xlim)
         #plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
+        plt.legend(["Minibatch", "Minibatch+NL"])
         plt.savefig(f"plots/NLoss_minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
         plt.clf()
 
 
+    # if data == "FB15K237":
+    #     # 272115
+    #     for x, y in [(1000, 50), (2000, 100), (9000, 500), (18000, 1000), (30000, 2000)]:
+    #         minib(x)
+    #         minib_nloss(y)
+    #
+    # if data == "WN18RR":
+    #     # Max allowed minibatch size for WN18RR is ~900 i.e. nbatches=100
+    #     for x, y in [(650, 50), (1000, 100), (5000, 500), (9000, 1000)]:
+    #         minib(x)
+    #         minib_nloss(y)
+
     if data == "FB15K237":
         # 272115
-        for x in [1000, 2000, 9000, 18000, 30000]:
-            minib(x)
-            # minib_nloss(x)
-
         for x in [50, 100, 500, 1000, 2000]:
-            minib_nloss(x)
+            minib(x)
+            minib_community(x)
 
-        # minib(200)
-        # minib_nloss(200)
-        # minib(8000)
-        
-        # minib(1000)        
-        # minib_nloss(1000)
-        # minib(40000)
+    if data == "WN18RR":
+        # Max allowed minibatch size for WN18RR is ~900 i.e. nbatches=100
+        for x in [50, 100, 500, 1000]:
+            minib(x)
+            minib_community(x)
 
-        # minib(2000)
-        # minib_nloss(2000)
-        # minib(80000)
-    # elif data == "WN18RR":
-    #     # 86835
-    #     minib(100)
-    #     minib_nloss(100)
-    #     minib(1800)
-        
-    #     minib(500)        
-    #     minib_nloss(500)
-    #     minib(10000)
-
-    #     minib(1000)
-    #     minib_nloss(1000)
-    #     minib(20000)
-
-    # minib(1000)
-    # minib_nloss(1000)
-    # minib(20000)
-    # minib_nloss(20000)
 
 if __name__ == "__main__":
     main("FB15K237")
-    # main("WN18RR")
+    main("WN18RR")
