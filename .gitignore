@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 **.ckpt
 **.json
+**_nl.txt
 
 # Distribution / packaging
 .Python

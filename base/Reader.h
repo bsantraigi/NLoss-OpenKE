@@ -4,6 +4,7 @@
 #include "Triple.h"
 #include <cstdlib>
 #include <algorithm>
+#include <string.h>
 
 INT *freqRel, *freqEnt;
 INT *lefHead, *rigHead;
@@ -18,6 +19,8 @@ Triple *trainRel;
 
 INT *testLef, *testRig;
 INT *validLef, *validRig;
+
+std::string train_fname = "train2id_nl.txt";
 
 extern "C"
 void importTrainFiles() {
@@ -36,7 +39,7 @@ void importTrainFiles() {
 	printf("The total of entities is %ld.\n", entityTotal);
 	fclose(fin);
 
-	fin = fopen((inPath + "train2id.txt").c_str(), "r");
+	fin = fopen((inPath + train_fname).c_str(), "r");
 	tmp = fscanf(fin, "%ld", &trainTotal);
 	trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainHead = (Triple *)calloc(trainTotal, sizeof(Triple));
@@ -138,7 +141,7 @@ void importTestFiles() {
     fclose(fin);
 
     FILE* f_kb1 = fopen((inPath + "test2id.txt").c_str(), "r");
-    FILE* f_kb2 = fopen((inPath + "train2id.txt").c_str(), "r");
+    FILE* f_kb2 = fopen((inPath + train_fname).c_str(), "r");
     FILE* f_kb3 = fopen((inPath + "valid2id.txt").c_str(), "r");
     tmp = fscanf(f_kb1, "%ld", &testTotal);
     tmp = fscanf(f_kb2, "%ld", &trainTotal);
