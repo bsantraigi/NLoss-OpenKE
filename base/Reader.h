@@ -2,6 +2,7 @@
 #define READER_H
 #include "Setting.h"
 #include "Triple.h"
+#include "Random.h"
 #include <cstdlib>
 #include <algorithm>
 #include <string>
@@ -44,6 +45,11 @@ void importTrainFiles() {
 
 	fin = fopen((inPath + train_fname).c_str(), "r");
 	tmp = fscanf(fin, "%ld", &trainTotal);
+
+	// Added by Bishal: Initialize an uniform distribution
+	cout << "Initialize Random" << endl;
+	Uniform_Dist::Instance()->init(0, trainTotal);
+
 	trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainHead = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainTail = (Triple *)calloc(trainTotal, sizeof(Triple));

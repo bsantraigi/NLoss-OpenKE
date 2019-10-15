@@ -6,6 +6,9 @@
 #include "Valid.h"
 #include <cstdlib>
 #include <pthread.h>
+#include <iostream>
+
+using namespace std;
 
 extern "C"
 void setInPath(char *path);
@@ -55,9 +58,10 @@ struct Parameter {
 	INT batchSize;
 	INT negRate;
 	INT negRelRate;
+	INT offset = 0;
 };
 
-void* getBatch(void* con) {
+void* getBatch_lessRandom(void* con) {
 	Parameter *para = (Parameter *)(con);
 	INT id = para -> id;
 	INT *batch_h = para -> batch_h;
@@ -67,7 +71,9 @@ void* getBatch(void* con) {
 	INT batchSize = para -> batchSize;
 	INT negRate = para -> negRate;
 	INT negRelRate = para -> negRelRate;
+	INT offset = para -> offset;
 	INT lef, rig;
+
 	if (batchSize % workThreads == 0) {
 		lef = id * (batchSize / workThreads);
 		rig = (id + 1) * (batchSize / workThreads);
@@ -79,6 +85,7 @@ void* getBatch(void* con) {
 	REAL prob = 500;
 	for (INT batch = lef; batch < rig; batch++) {
 		INT i = rand_max(id, trainTotal);
+		i = batch + offset;
 		batch_h[batch] = trainList[i].h;
 		batch_t[batch] = trainList[i].t;
 		batch_r[batch] = trainList[i].r;
@@ -112,6 +119,8 @@ void* getBatch(void* con) {
 
 extern "C"
 void sampling(INT *batch_h, INT *batch_t, INT *batch_r, REAL *batch_y, INT batchSize, INT negRate = 1, INT negRelRate = 0) {
+	INT offset = min(Uniform_Dist::Instance()->sample(), trainTotal - batchSize);
+	// cout << "Offset: " << offset << endl;
 	pthread_t *pt = (pthread_t *)malloc(workThreads * sizeof(pthread_t));
 	Parameter *para = (Parameter *)malloc(workThreads * sizeof(Parameter));
 	for (INT threads = 0; threads < workThreads; threads++) {
@@ -123,7 +132,8 @@ void sampling(INT *batch_h, INT *batch_t, INT *batch_r, REAL *batch_y, INT batch
 		para[threads].batchSize = batchSize;
 		para[threads].negRate = negRate;
 		para[threads].negRelRate = negRelRate;
-		pthread_create(&pt[threads], NULL, getBatch, (void*)(para+threads));
+		para[threads].offset = offset;
+		pthread_create(&pt[threads], NULL, getBatch_lessRandom, (void*)(para+threads));
 	}
 	for (INT threads = 0; threads < workThreads; threads++)
 		pthread_join(pt[threads], NULL);
