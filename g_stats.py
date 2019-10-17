@@ -26,7 +26,7 @@ font = {'family' : 'normal',
         'size'   : 18}
 matplotlib.rc('font', **font)
 
-from utils import get_triples, get_list
+from utils import get_triples, get_list, combine2pdf
 
 def gettripleAdj(path):
     with open(path) as ef:
@@ -153,12 +153,15 @@ def main(data):
         counts = counts/counts.sum()
 
         # PLOT 2
-        plt.bar(keys, counts, alpha=0.6)
+        plt.bar(keys, counts, alpha=1.)
         plt.xlim(0, xlim)
-        #plt.ylim(0, ylim)
+        plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
-        # plt.savefig(f"plots/minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
-        # plt.clf()
+        plt.title(f"minibatch_BS({bs})_{data}")
+        F = f"plots/minibatch_BS({bs})_{data}.png"
+        plt.savefig(F, dpi=300, bbox_inches='tight')
+        plt.clf()
+        return F
 
     def minib_community(bs):
         triples_nl = get_triples(f"benchmarks/{data}/train2id_nl.txt")
@@ -176,13 +179,16 @@ def main(data):
         counts = counts/counts.sum()
 
         # PLOT 2
-        plt.bar(keys, counts, alpha=0.6)
+        plt.bar(keys, counts, alpha=1.)
         plt.xlim(0, xlim)
-        # plt.ylim(0, ylim)
+        plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
         plt.legend(["Minibatch", "Community-Minibatch"])
-        plt.savefig(f"plots/community_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
+        plt.title(f"community_BS({bs})_{data}")
+        F = f"plots/community_BS({bs})_{data}.png"
+        plt.savefig(F, dpi=300, bbox_inches='tight')
         plt.clf()
+        return F
 
     # minibatch degree with NLoss
     def minib_nloss(bs):
@@ -211,14 +217,16 @@ def main(data):
         print(len(ext_bs))
         print(f"{data}, Minibatch: {bs}, nl_minibatch: {np.mean(ext_bs)}")
         # PLOT 3
-        plt.bar(keys, counts, alpha=0.5)
+        plt.bar(keys, counts, alpha=1.)
         plt.xlim(0, xlim)
-        #plt.ylim(0, ylim)
+        plt.ylim(0, ylim)
         plt.xlabel("Degree of vertex"); plt.ylabel("Prob. density")
+        plt.title(f"NLoss_minibatch_BS({bs})_{data}")
         plt.legend(["Minibatch", "Minibatch+NL"])
-        plt.savefig(f"plots/NLoss_minibatch_BS({bs})_{data}.png", dpi=300, bbox_inches='tight')
+        F = f"plots/NLoss_minibatch_BS({bs})_{data}.png"
+        plt.savefig(F, dpi=300, bbox_inches='tight')
         plt.clf()
-
+        return F
 
     # if data == "FB15K237":
     #     # 272115
@@ -232,19 +240,27 @@ def main(data):
     #         minib(x)
     #         minib_nloss(y)
 
-    if data == "FB15K237":
-        # 272115
-        for x in [50, 100, 500, 1000, 2000]:
-            minib(x)
-            minib_community(x)
+    # if data == "FB15K237":
+    #     # 272115
+    #     for x in [50, 100, 500, 1000, 2000]:
+    #         minib(x)
+    #         minib_community(x)
+    #
+    # if data == "WN18RR":
+    #     # Max allowed minibatch size for WN18RR is ~900 i.e. nbatches=100
+    #     for x in [50, 100, 500, 1000]:
+    #         minib(x)
+    #         minib_community(x)
 
-    if data == "WN18RR":
-        # Max allowed minibatch size for WN18RR is ~900 i.e. nbatches=100
-        for x in [50, 100, 500, 1000]:
-            minib(x)
-            minib_community(x)
+    imagelist = []
+    for x in [250, 1000, 2000]:
+        i1 = minib(x)
+        i2 = minib_community(x)
+        i3 = minib_nloss(x)
+        imagelist.append([i1,i2,i3])
 
+    combine2pdf(imagelist, f=f"plots/{data}_combined.pdf")
 
 if __name__ == "__main__":
     main("FB15K237")
-    main("WN18RR")
+    # main("WN18RR")

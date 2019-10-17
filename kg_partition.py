@@ -1,8 +1,10 @@
+import numpy as np
 from collections import defaultdict
 from utils import get_triples
+import random
 
-# dataset = "FB15K237"
-dataset = "WN18RR"
+dataset = "FB15K237"
+# dataset = "WN18RR"
 
 train_data = get_triples(f"./benchmarks/{dataset}/train2id.txt")
 
@@ -81,19 +83,30 @@ missed = 0
 tuple_memberships_1 = defaultdict(list)
 tuple_memberships_2 = defaultdict(list)
 orphans = []
-for h,r,t in train_data:
+
+
+for h, r, t in train_data:
     eh, et = h, t
-    if eh in rev_memberships_1:
-        tuple_memberships_1[rev_memberships_1[eh]].append((h, r, t))
-    elif et in rev_memberships_1:
-        tuple_memberships_1[rev_memberships_1[et]].append((h, r, t))
-    elif eh in rev_memberships_2:
-        tuple_memberships_2[rev_memberships_2[eh]].append((h, r, t))
-    elif et in rev_memberships_2:
-        tuple_memberships_2[rev_memberships_2[et]].append((h, r, t))
+
+    # We will randomly and uniformly choose b/w following 4 options
+    ch1, ct1 = eh in rev_memberships_1, et in rev_memberships_1
+    ch2, ct2 = eh in rev_memberships_2, et in rev_memberships_2
+    options = np.array([ch1, ct1, ch2, ct2])
+    if options.sum() > 0:
+        options = np.where([ch1, ct1, ch2, ct2])[0]
+        box = np.random.choice(options)
+
+        if box == 0:
+            tuple_memberships_1[rev_memberships_1[eh]].append((h, r, t))
+        elif box ==1:
+            tuple_memberships_1[rev_memberships_1[et]].append((h, r, t))
+        elif box == 2:
+            tuple_memberships_2[rev_memberships_2[eh]].append((h, r, t))
+        elif box == 3:
+            tuple_memberships_2[rev_memberships_2[et]].append((h, r, t))
     else:
         missed += 1
-        orphans.append((h,r,t))
+        orphans.append((h, r, t))
 
 
 print(f"Missed {missed} of {len(train_data)}")

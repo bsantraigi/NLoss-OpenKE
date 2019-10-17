@@ -56,7 +56,7 @@ class AdjList(Dataset):
             getter = itemgetter(*index)
             NS = np.concatenate(getter(self.adjlist), 0)
             inv_deg = np.concatenate(getter(self.degrees))
-            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*10]
+            shuf = np.random.permutation(inv_deg.shape[0])[:len(index)*5]
             # shuf = np.random.choice(NS.shape[0], len(index)*10, replace=False)
             return NS[shuf], inv_deg[shuf]
         else:

@@ -24,7 +24,7 @@ Triple *trainRel;
 INT *testLef, *testRig;
 INT *validLef, *validRig;
 
-string train_fname = "train2id_nl.txt";
+string train_fname = "train2id.txt";
 
 extern "C"
 void importTrainFiles() {

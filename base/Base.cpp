@@ -84,8 +84,8 @@ void* getBatch_lessRandom(void* con) {
 	}
 	REAL prob = 500;
 	for (INT batch = lef; batch < rig; batch++) {
-		INT i = rand_max(id, trainTotal);
-		i = batch + offset;
+		// INT i = rand_max(id, trainTotal);
+		INT i = batch + offset;
 		batch_h[batch] = trainList[i].h;
 		batch_t[batch] = trainList[i].t;
 		batch_r[batch] = trainList[i].r;
@@ -119,7 +119,8 @@ void* getBatch_lessRandom(void* con) {
 
 extern "C"
 void sampling(INT *batch_h, INT *batch_t, INT *batch_r, REAL *batch_y, INT batchSize, INT negRate = 1, INT negRelRate = 0) {
-	INT offset = min(Uniform_Dist::Instance()->sample(), trainTotal - batchSize);
+	//INT offset = min(Uniform_Dist::Instance()->sample(), trainTotal - batchSize);
+	INT offset = 0;
 	// cout << "Offset: " << offset << endl;
 	pthread_t *pt = (pthread_t *)malloc(workThreads * sizeof(pthread_t));
 	Parameter *para = (Parameter *)malloc(workThreads * sizeof(Parameter));
