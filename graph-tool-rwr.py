@@ -4,7 +4,7 @@ from collections import defaultdict
 from pylab import *
 import random
 
-data = "DB100K" #"FB15k-237"
+data = "FB15k-237"
 #FB
 rel = open(f'./benchmarks/{data}/relations.dict', 'r')
 ent = open(f'./benchmarks/{data}/entities.dict', 'r')
@@ -51,9 +51,7 @@ print(test_g)
 valid_g = create_graph(valid)
 print(valid_g)
 
-# exit(1)
-
-def draw_hist_n_graph(g):
+def draw_hist_n_graph(g, hist_name="minibatch_hist.svg", graph_name="rw_mini.svg"):
     out_hist = vertex_hist(g, "out")
     out_hist[0] = out_hist[0]/np.sum(out_hist[0])
     print(f"Expected Degree:{np.sum(out_hist[0]*out_hist[1][:-1])}")
@@ -71,29 +69,29 @@ def draw_hist_n_graph(g):
     xlabel("$k_{in}$")
     ylabel("$NP(k_{in})$")
     tight_layout()
-    savefig("minibatch_hist.svg")
+    savefig(f"plots/{hist_name}")
     # pos = fruchterman_reingold_layout(g)
     graph_draw(g, output_size=(1000, 1000), vertex_color=[1, 1, 1, 0],
                vertex_size=2.5, edge_pen_width=0.6,
-               vcmap=matplotlib.cm.gist_heat_r, output="rw_mini.svg")
+               vcmap=matplotlib.cm.gist_heat_r, output=f"plots/{graph_name}")
 
 
 def random_walk():
     v = train_g.vertex(random.randint(0, train_g.num_vertices() - 1))
     minib = []
     while True:
-        print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
-              v.out_degree())
+        # print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
+        #       v.out_degree())
 
         if v.out_degree() == 0:
             print("Nowhere else to go... We found the main hub!")
             break
 
-        if len(minib) > 1024:
+        if len(minib) > 128:
             mini_g = Graph(directed=False)
             mini_g.add_edge_list(minib, hashed=True)
 
-            draw_hist_n_graph(mini_g)
+            draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
             break
 
         n_list = list(v.out_neighbors())
@@ -111,14 +109,14 @@ def random_walk_induced_subg():
     minib_e = []
     minib_v = set()
     while True:
-        print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
-              v.out_degree())
+        # print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
+        #       v.out_degree())
 
         if v.out_degree() == 0:
             print("Nowhere else to go... We found the main hub!")
             break
 
-        if len(minib_v) == 400:
+        if len(minib_v) == 128:
             vfilt = train_g.new_vertex_property('bool')
             for v in minib_v:
                 vfilt[v] = True
@@ -128,7 +126,7 @@ def random_walk_induced_subg():
             # mini_g = Graph(directed=False)
             # mini_g.add_edge_list(minib_e, hashed=True)
 
-            draw_hist_n_graph(mini_g)
+            draw_hist_n_graph(mini_g, hist_name="rwisg_hist.svg", graph_name="rwisg_graph.svg")
             break
 
         nxt = v
@@ -147,18 +145,18 @@ def random_walk_with_restart():
     minib_e = []
     minib_v = []
     while True:
-        print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
-              v.out_degree())
+        # print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
+        #       v.out_degree())
 
         if v.out_degree() == 0:
             print("Nowhere else to go... We found the main hub!")
             break
 
-        if len(minib_e) > 1024:
+        if len(minib_e) > 128:
             mini_g = Graph(directed=False)
             mini_g.add_edge_list(minib_e, hashed=True)
 
-            draw_hist_n_graph(mini_g)
+            draw_hist_n_graph(mini_g, hist_name="rw_hist.svg", graph_name="rw_graph.svg")
             break
 
         if random.random() < restart_prob:
@@ -179,9 +177,9 @@ def random_walk_with_restart():
 
 
 if __name__=="__main__":
-    # random_walk()
+    random_walk()
     # random_walk_with_restart()
-    random_walk_induced_subg()
+    # random_walk_induced_subg()
 
 
 # SAMPLE
