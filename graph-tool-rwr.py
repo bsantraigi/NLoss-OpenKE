@@ -5,14 +5,14 @@ from pylab import *
 import random
 
 '''TODO:
-1. Histograms (Side by side)
-2. Expected Degree of whole KG (in ED vs BS)
-3. Draw Graphs (With proper layouts)
-4. Data sampling code for RotatE: with replacement=False/True
-5. Increase number of batches for all estimates
+[ ] Histograms (Side by side)
+[x] Expected Degree of whole KG (in ED vs BS)
+[x] Draw Graphs (With proper layouts)
+[ ] Data sampling code for RotatE: with replacement=False/True
+[x] Increase number of batches for all estimates
 '''
 
-data = "FB15k-237"
+data = "DB100K"
 
 rel = open(f'./benchmarks/{data}/relations.dict', 'r')
 ent = open(f'./benchmarks/{data}/entities.dict', 'r')
@@ -55,8 +55,6 @@ def create_graph(dataFileHandle):
     return g
 
 
-
-
 def normalized_hist(g):
     out_hist = vertex_hist(g, "out")
     out_hist[0] = out_hist[0] / np.sum(out_hist[0])
@@ -81,9 +79,13 @@ def draw_hist_n_graph(g, hist_name="minibatch_hist.svg", graph_name="rw_mini.svg
     ylabel("$NP(k_{in})$")
     tight_layout()
     savefig(f"plots/{hist_name}")
-    # pos = fruchterman_reingold_layout(g)
-    graph_draw(g, output_size=(1000, 1000), vertex_color=[1, 1, 1, 0],
-               vertex_size=2.5, edge_pen_width=0.6,
+    # pos = sfdp_layout(g)
+    pos = arf_layout(g, max_iter=1000, epsilon=1e-4)
+    # graph_draw(g, pos=pos, output_size=(1000, 1000), vertex_color=[1, 1, 1, 0],
+    #            vertex_size=2.5, edge_pen_width=0.6,
+    #            vcmap=matplotlib.cm.gist_heat_r, output=f"plots/{graph_name}")
+    graph_draw(g, pos=pos, output_size=(1000, 1000),
+               vertex_size=10, edge_pen_width=0.6,
                vcmap=matplotlib.cm.gist_heat_r, output=f"plots/{graph_name}")
 
 
@@ -123,6 +125,12 @@ class Sampler:
                 # draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
                 self.refresh()
                 return mini_g
+
+    def just_draw(self, minib_size, hist_name, graph_name):
+        mini_g = self.sample_single_batch(minib_size)
+        print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+        print("Got the minibatch grpah! Drawing now...")
+        draw_hist_n_graph(mini_g, hist_name, graph_name)
 
     def remember_the_name(self, minib_size, nbatches):
         print("Batches to sample:", nbatches)
@@ -334,62 +342,34 @@ if __name__=="__main__":
     train_g = create_graph(train)
     print(train_g)
 
-    # test_g = create_graph(test)
-    # print(test_g)
+    # hist_full = normalized_hist(train_g)
+    # ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
     #
-    # valid_g = create_graph(valid)
-    # print(valid_g)
+    # fig, ax = plt.subplots()
+    #
+    # bs_max = 8000
+    # step = 1000
+    # print("================ SIMPLY RANDOM ==================")
+    # ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
+    # print("================ RW ==================")
+    # ed_vs_bs(RW, ax, 30, bs_max, step)
+    # print("================ RWR ==================")
+    # ed_vs_bs(RWR, ax, 30, bs_max, step)
+    #
+    # bs_max = 2500
+    # step = 250
+    # print("================ RWISG ==================")
+    # ed_vs_bs(RWISG, ax, 10, bs_max, step)
+    # print("================ RWRISG ==================")
+    # ed_vs_bs(RWRISG, ax, 10, bs_max, step)
+    #
+    # ax.axhline(ed_full, linestyle='--')
+    # ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    #
+    # plt.show()
 
-    hist_full = normalized_hist(train_g)
-    ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
+    rwr = RWR(train_g, restart_prob=0.8)
+    rwr.just_draw(50, f'rwr_hist_{data}.svg', f'rwr_graph_{data}.svg')
 
-    fig, ax = plt.subplots()
-
-    # ed_vs_bs(random_walk, ax, 30, 10000, 1000)
-    bs_max = 8000
-    step = 1000
-    print("================ SIMPLY RANDOM ==================")
-    ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
-    print("================ RW ==================")
-    ed_vs_bs(RW, ax, 30, bs_max, step)
-    print("================ RWR ==================")
-    ed_vs_bs(RWR, ax, 30, bs_max, step)
-
-    bs_max = 2500
-    step = 250
-    print("================ RWISG ==================")
-    ed_vs_bs(RWISG, ax, 10, bs_max, step)
-    print("================ RWRISG ==================")
-    ed_vs_bs(RWRISG, ax, 10, bs_max, step)
-
-    ax.axhline(ed_full, linestyle='--')
-    ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
-
-    plt.show()
-
-
-# SAMPLE
-'''
-train_g = Graph(directed=False)
-train_g.add_vertex(6)
-train_g.add_edge_list([
-	(0,1),
-	(1,2),
-	(2,3),
-	(3,4),
-	(2,4),
-	(0,5),
-	(1,5)
-])
-
-print(train_g)
-graph_draw(train_g)
-
-train_g.remove_edge(train_g.edge(1,2))
-train_g.remove_edge(train_g.edge(2,3))
-train_g.remove_edge(train_g.edge(2,4))
-if train_g.vertex(2).out_degree() == 0:
-	train_g.remove_vertex(2)
-
-print(train_g)
-'''
+    rwisg = RWISG(train_g)
+    rwisg.just_draw(20, f'rwisg_hist_{data}.svg', f'rwisg_graph_{data}.svg')
