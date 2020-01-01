@@ -95,6 +95,106 @@ def sample_initial_vertex(g):
         v = g.vertex(random.randint(0, g.num_vertices() - 1))
     return v
 
+class Sampler:
+    def __init__(self, g):
+        self.g = g
+
+        self.batch_triples = []
+
+        self.v = sample_initial_vertex(g)
+        self.minib_e = []
+        self.minib_v = []
+
+    def refresh(self):
+        self.minib_e = []
+        self.minib_v = []
+        self.v = sample_initial_vertex(self.g)
+
+    def sample_single_batch(self, minib_e_size):
+        stall_limit = 4
+        while True:
+            if self.v.out_degree() == 0 or stall_limit == 0:
+                raise Exception(f"STALLED at {self.v}")
+
+            nxt = self.sample_nxt()
+            stall_limit = (stall_limit-1) if self.v == nxt else 4
+            self.v = nxt
+
+            if len(self.minib_e) >= minib_e_size:
+                mini_g = self.pack()
+                # draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
+                self.refresh()
+                return mini_g
+
+    def remember_the_name(self, minib_size, nbatches):
+        # def random_walk_with_restart(g, minib_size=128, nbatches=100, restart_prob=0.4):
+
+        print("Batches to sample:", nbatches)
+        max_d = 0
+        smooth_hist = []
+
+        while nbatches > 0:
+            mini_g = self.sample_single_batch(minib_size)
+
+            # Smooth histogram
+            out_hist = normalized_hist(mini_g)
+            max_d = max(max_d, out_hist[1][-2] + 1)
+            smooth_hist.append(out_hist)
+
+            nbatches -= 1
+
+        # Average the histogram
+        all_hist = np.zeros((len(smooth_hist), int(max_d)))
+        print("Number of batches collected:", len(smooth_hist))
+        for i, d_hist in enumerate(smooth_hist):
+            all_hist[i, d_hist[1][:-1]] = d_hist[0]
+
+        smooth_hist = np.mean(all_hist, 0)
+
+        ed = np.sum(smooth_hist * np.arange(smooth_hist.shape[0]))
+        print(f"Expected Degree:{ed}")
+
+        return np.mean(self.batch_triples), ed, smooth_hist
+
+    def pack(self):
+        raise NotImplementedError()
+
+    def sample_nxt(self):
+        raise NotImplementedError()
+
+class RWR(Sampler):
+    def __init__(self, g, restart_prob = 0.4):
+        super(RWR, self).__init__(g)
+        self.restart_prob = restart_prob
+
+    def pack(self):
+        self.batch_triples.append(len(self.minib_e))
+        mini_g = Graph(directed=False)
+        mini_g.add_edge_list(self.minib_e, hashed=True)
+        print(f"RWR Minibatch: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+        return mini_g
+
+    def sample_nxt(self):
+        if random.random() < self.restart_prob and len(self.minib_v) > 0:
+            # Change parent to a previously
+            # discovered vertex.
+            self.minib_v = list(set(self.minib_v))
+            self.v = random.choice(self.minib_v)
+
+        nxt = self.v
+        self.minib_v.append(nxt)
+        n_list = list(self.v.out_neighbors())
+        while nxt == self.v:
+            # if len(n_list) == 1:
+            #     nxt = n_list[0]
+            # else:
+            k = random.randint(0, len(n_list) - 1)
+            # print(f"k: {k}")
+            nxt = n_list[k]
+        self.minib_e.append(self.g.edge(self.v, nxt))
+
+        return nxt
+
 
 def simply_random(g, minib_e_size=128, nbatches=100):
     batch_triples = []
@@ -197,75 +297,6 @@ def random_walk(g, minib_e_size=128, nbatches=100):
     return np.mean(batch_triples), ed, smooth_hist
 
 
-def random_walk_with_restart(g, minib_e_size=128, nbatches=100, restart_prob=0.4):
-    batch_triples = []
-    smooth_hist = []
-    max_d = 0
-
-    v = sample_initial_vertex(g)
-    minib_e = []
-    minib_v = []
-    print("Batches to sample:", nbatches)
-    while nbatches > 0:
-        # print("vertex:", int(v), "in-degree:", v.in_degree(), "out-degree:",
-        #       v.out_degree())
-
-        if v.out_degree() == 0:
-            print("Nowhere else to go... We found the main hub!")
-            break
-
-        if len(minib_e) >= minib_e_size:
-            batch_triples.append(len(minib_e))
-            mini_g = Graph(directed=False)
-            mini_g.add_edge_list(minib_e, hashed=True)
-            print(f"RWR Minibatch: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
-
-            # Smooth histogram
-            out_hist = normalized_hist(mini_g)
-            max_d = max(max_d, out_hist[1][-2] + 1)
-            smooth_hist.append(out_hist)
-
-            # draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
-
-            # INIT NEXT ROUND!!!
-            nbatches -= 1
-            minib_e = []
-            minib_v = []
-            v = sample_initial_vertex(g)
-
-        if random.random() < restart_prob and len(minib_v) > 0:
-            # Change parent to a previously
-            # discovered vertex.
-            minib_v = list(set(minib_v))
-            v = random.choice(minib_v)
-
-        nxt = v
-        minib_v.append(nxt)
-        n_list = list(v.out_neighbors())
-        while nxt == v:
-            # if len(n_list) == 1:
-            #     nxt = n_list[0]
-            # else:
-            k = random.randint(0, len(n_list) - 1)
-            # print(f"k: {k}")
-            nxt = n_list[k]
-        minib_e.append(g.edge(v, nxt))
-        v = nxt
-
-    # Average the histogram
-    all_hist = np.zeros((len(smooth_hist), int(max_d)))
-    print("Number of batches collected:", len(smooth_hist))
-    for i, d_hist in enumerate(smooth_hist):
-        all_hist[i, d_hist[1][:-1]] = d_hist[0]
-
-    smooth_hist = np.mean(all_hist, 0)
-
-    ed = np.sum(smooth_hist * np.arange(smooth_hist.shape[0]))
-    print(f"Expected Degree:{ed}")
-
-    return np.mean(batch_triples), ed, smooth_hist
-
-
 def random_walk_induced_subg(g, minib_v_size=128, nbatches=100):
     batch_triples = []
     smooth_hist = []
@@ -337,10 +368,10 @@ def ed_vs_bs(sampler, ax, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
-    nbatches = 100
+    nbatches = 10
     for _bs in np.arange(rng_start, rng_end, rng_step):
         print("Testing batch size", _bs)
-        bs, ed, _hist = sampler(train_g, _bs, nbatches)
+        bs, ed, _hist = sampler.remember_the_name(_bs, nbatches)
         bss.append(bs)
         eds.append(ed)
 
@@ -349,12 +380,13 @@ def ed_vs_bs(sampler, ax, rng_start, rng_end, rng_step):
            title=f"Expected Degree of Minibatch Graphs ({data})")
 
 if __name__=="__main__":
+    rwr = RWR(train_g)
     fig, ax = plt.subplots()
 
-    ed_vs_bs(simply_random, ax, 30, 10000, 1000)
-    ed_vs_bs(random_walk, ax, 30, 10000, 1000)
-    ed_vs_bs(random_walk_with_restart, ax, 30, 10000, 1000)
-    ed_vs_bs(random_walk_induced_subg, ax, 10, 2000, 200)
+    # ed_vs_bs(simply_random, ax, 30, 10000, 1000)
+    # ed_vs_bs(random_walk, ax, 30, 10000, 1000)
+    ed_vs_bs(rwr, ax, 30, 2000, 500)
+    # ed_vs_bs(random_walk_induced_subg, ax, 10, 2000, 200)
 
     ax.legend(['SR', 'RW', 'RWR', 'RWISG'])
     plt.show()
