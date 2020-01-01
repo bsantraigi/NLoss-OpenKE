@@ -368,8 +368,17 @@ if __name__=="__main__":
     #
     # plt.show()
 
+    sr = SimplyRandom(train_g)
+    sr.just_draw(50, f'hist_sr_{data}.svg', f'graph_sr_{data}.svg')
+
+    rw = RW(train_g)
+    rw.just_draw(50, f'hist_rw_{data}.svg', f'graph_rw_{data}.svg')
+
     rwr = RWR(train_g, restart_prob=0.8)
-    rwr.just_draw(50, f'rwr_hist_{data}.svg', f'rwr_graph_{data}.svg')
+    rwr.just_draw(50, f'hist_rwr_{data}.svg', f'graph_rwr_{data}.svg')
 
     rwisg = RWISG(train_g)
-    rwisg.just_draw(20, f'rwisg_hist_{data}.svg', f'rwisg_graph_{data}.svg')
+    rwisg.just_draw(20, f'hist_rwisg_{data}.svg', f'graph_rwisg_{data}.svg')
+
+    rwrisg = RWRISG(train_g, restart_prob=0.8)
+    rwrisg.just_draw(50, f'hist_rwrisg_{data}.svg', f'graph_rwrisg_{data}.svg')
