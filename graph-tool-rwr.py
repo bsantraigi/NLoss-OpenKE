@@ -5,14 +5,15 @@ from pylab import *
 import random
 
 '''TODO:
-[ ] Histograms (Side by side)
+[ ] RWISG Hangs
+[x] Histograms (Side by side)
 [x] Expected Degree of whole KG (in ED vs BS)
 [x] Draw Graphs (With proper layouts)
 [ ] Data sampling code for RotatE: with replacement=False/True
 [x] Increase number of batches for all estimates
 '''
 
-data = "DB100K"
+data = "FB15k-237"
 
 rel = open(f'./benchmarks/{data}/relations.dict', 'r')
 ent = open(f'./benchmarks/{data}/entities.dict', 'r')
@@ -79,8 +80,9 @@ def draw_hist_n_graph(g, hist_name="minibatch_hist.svg", graph_name="rw_mini.svg
     ylabel("$NP(k_{in})$")
     tight_layout()
     savefig(f"plots/{hist_name}")
-    # pos = sfdp_layout(g)
-    pos = arf_layout(g, max_iter=1000, epsilon=1e-4)
+    pos = sfdp_layout(g)
+    # pos = arf_layout(g, max_iter=1000, epsilon=1e-4)
+
     # graph_draw(g, pos=pos, output_size=(1000, 1000), vertex_color=[1, 1, 1, 0],
     #            vertex_size=2.5, edge_pen_width=0.6,
     #            vcmap=matplotlib.cm.gist_heat_r, output=f"plots/{graph_name}")
@@ -105,41 +107,41 @@ class Sampler:
         self.minib_e = []
         self.minib_v = set()
 
-    def refresh(self):
+    def _refresh(self):
         self.minib_e = []
         self.minib_v = set()
         self.v = sample_initial_vertex(self.g)
 
-    def sample_single_batch(self, minib_size):
+    def _sample_single_batch(self, minib_size):
         stall_limit = 4
         while True:
             if self.v.out_degree() == 0 or stall_limit == 0:
                 raise Exception(f"STALLED at {self.v}")
 
-            nxt = self.sample_nxt()
+            nxt = self._sample_single_nxt()
             stall_limit = (stall_limit-1) if self.v == nxt else 4
             self.v = nxt
 
-            if self.sample_size() >= minib_size:
-                mini_g = self.pack()
+            if self._sample_size() >= minib_size:
+                mini_g = self._pack()
                 # draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
-                self.refresh()
+                self._refresh()
                 return mini_g
 
     def just_draw(self, minib_size, hist_name, graph_name):
-        mini_g = self.sample_single_batch(minib_size)
+        mini_g = self._sample_single_batch(minib_size)
         print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
         print("Got the minibatch grpah! Drawing now...")
         draw_hist_n_graph(mini_g, hist_name, graph_name)
 
-    def remember_the_name(self, minib_size, nbatches):
+    def hist_n_stats(self, minib_size, nbatches):
         print("Batches to sample:", nbatches)
         max_d = 0
         smooth_hist = []
         self.batch_triples = []
 
         while nbatches > 0:
-            mini_g = self.sample_single_batch(minib_size)
+            mini_g = self._sample_single_batch(minib_size)
             print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
 
             # Smooth histogram
@@ -162,13 +164,33 @@ class Sampler:
 
         return np.mean(self.batch_triples), ed, smooth_hist
 
-    def pack(self):
+    def sample(self, minib_size, nbatches):
+        print("Batches to sample:", nbatches)
+        max_d = 0
+        smooth_hist = []
+        self.batch_triples = []
+
+        while nbatches > 0:
+            mini_g = self._sample_single_batch(minib_size)
+            print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+
+            # Smooth histogram
+            out_hist = normalized_hist(mini_g)
+            max_d = max(max_d, out_hist[1][-2] + 1)
+            smooth_hist.append(out_hist)
+
+            nbatches -= 1
+
+        # Figure out later!
+        return None
+
+    def _pack(self):
         raise NotImplementedError()
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         raise NotImplementedError()
 
-    def sample_size(self):
+    def _sample_size(self):
         raise NotImplementedError()
 
 
@@ -176,13 +198,13 @@ class RW(Sampler):
     def __init__(self, g, **kwargs):
         super(RW, self).__init__(g)
 
-    def pack(self):
+    def _pack(self):
         self.batch_triples.append(len(self.minib_e))
         mini_g = Graph(directed=False)
         mini_g.add_edge_list(self.minib_e, hashed=True)
         return mini_g
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         nxt = self.v
         n_list = list(self.v.out_neighbors())
         while nxt == self.v:
@@ -191,7 +213,7 @@ class RW(Sampler):
         self.minib_e.append(self.g.edge(self.v, nxt))
         return nxt
 
-    def sample_size(self):
+    def _sample_size(self):
         return len(self.minib_e)
 
 
@@ -201,14 +223,14 @@ class RWR(Sampler):
         super(RWR, self).__init__(g)
         self.restart_prob = kwargs['restart_prob']
 
-    def pack(self):
+    def _pack(self):
         self.batch_triples.append(len(self.minib_e))
         mini_g = Graph(directed=False)
         mini_g.add_edge_list(self.minib_e, hashed=True)
         # print(f"RWR Minibatch: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
         return mini_g
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         if random.random() < self.restart_prob and len(self.minib_v) > 0:
             # Change parent to a previously
             # discovered vertex.
@@ -224,7 +246,7 @@ class RWR(Sampler):
 
         return nxt
 
-    def sample_size(self):
+    def _sample_size(self):
         return len(self.minib_e)
 
 
@@ -232,7 +254,7 @@ class RWISG(Sampler):
     def __init__(self, g, **kwargs):
         super(RWISG, self).__init__(g)
 
-    def pack(self):
+    def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
         for v in self.minib_v:
             vfilt[v] = True
@@ -243,7 +265,7 @@ class RWISG(Sampler):
         self.batch_triples.append(mini_g.num_edges())
         return mini_g
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         nxt = self.v
         self.minib_v.add(nxt)
         n_list = list(self.v.out_neighbors())
@@ -254,7 +276,7 @@ class RWISG(Sampler):
 
         return nxt
 
-    def sample_size(self):
+    def _sample_size(self):
         return len(self.minib_v)
 
 
@@ -265,7 +287,7 @@ class RWRISG(Sampler):
         self.restart_prob = kwargs['restart_prob']
         # self.v0 = self.v
 
-    def pack(self):
+    def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
         for v in self.minib_v:
             vfilt[v] = True
@@ -276,7 +298,7 @@ class RWRISG(Sampler):
         self.batch_triples.append(mini_g.num_edges())
         return mini_g
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         if random.random() < self.restart_prob and len(self.minib_v) > 0:
             # Change parent to a previously
             # discovered vertex.
@@ -292,7 +314,7 @@ class RWRISG(Sampler):
 
         return nxt
 
-    def sample_size(self):
+    def _sample_size(self):
         return len(self.minib_v)
 
 
@@ -305,50 +327,75 @@ class SimplyRandom(Sampler):
 
         self.minib_size = kwargs['minib_size']
 
-    def pack(self):
+    def _pack(self):
         self.batch_triples.append(len(self.minib_e))
         mini_g = Graph(directed=False)
         mini_g.add_edge_list(self.minib_e, hashed=True)
         return mini_g
 
-    def sample_nxt(self):
+    def _sample_single_nxt(self):
         self.minib_e = random.sample(self.edge_list, self.minib_size)
         return self.minib_e[-1].target()
 
-    def sample_size(self):
+    def _sample_size(self):
         return len(self.minib_e)
 
 
-def ed_vs_bs(SamplerClass, ax, rng_start, rng_end, rng_step):
+def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
-    nbatches = 100
+    nbatches = 5
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
         print("\nTesting batch size", _bs)
         sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
-        bs, ed, _hist = sampler.remember_the_name(_bs, nbatches)
+        bs, ed, _hist = sampler.hist_n_stats(_bs, nbatches)
         print(bs, ed)
 
         bss.append(bs)
         eds.append(ed)
+
+    # Plot the last hist for now. May require to plot for
+    # particular batch size later!
+
     print(f"Restart Prob was {rp}.")
-    ax.plot(bss, eds, marker='x')
-    ax.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
-           title=f"Expected Degree of Minibatch Graphs ({data})")
+    ax_ed.plot(bss, eds, marker='x')
+    ax_ed.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
+              title=f"Expected Degree of Minibatch Graphs ({data})")
+
+
+def just_hist(SamplerClass, _bs):
+    nbatches = 40
+    rp = 0.8
+    print("\nTesting batch size", _bs)
+    sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
+    bs, ed, _hist = sampler.hist_n_stats(_bs, nbatches)
+    print(bs, ed)
+    # Plot the last hist for now. May require to plot for
+    # particular batch size later!
+
+    print(f"Restart Prob was {rp}.")
+    return _hist
+
+def pencil(SamplerClass, tag, minib_size):
+    print(f"\n>>> {tag} <<<\n")
+    s = SamplerClass(train_g, restart_prob=0.8, minib_size=minib_size)
+    s.just_draw(minib_size, f'hist_{tag}_{data}.svg', f'graph_{tag}_{data}.svg')
 
 if __name__=="__main__":
     train_g = create_graph(train)
     print(train_g)
 
+    '''E[D] plots only
+    '''
     # hist_full = normalized_hist(train_g)
     # ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
     #
     # fig, ax = plt.subplots()
     #
-    # bs_max = 8000
-    # step = 1000
+    # bs_max = 800
+    # step = 100
     # print("================ SIMPLY RANDOM ==================")
     # ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     # print("================ RW ==================")
@@ -356,8 +403,8 @@ if __name__=="__main__":
     # print("================ RWR ==================")
     # ed_vs_bs(RWR, ax, 30, bs_max, step)
     #
-    # bs_max = 2500
-    # step = 250
+    # bs_max = 250
+    # step = 25
     # print("================ RWISG ==================")
     # ed_vs_bs(RWISG, ax, 10, bs_max, step)
     # print("================ RWRISG ==================")
@@ -365,20 +412,79 @@ if __name__=="__main__":
     #
     # ax.axhline(ed_full, linestyle='--')
     # ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
-    #
-    # plt.show()
 
-    sr = SimplyRandom(train_g)
-    sr.just_draw(50, f'hist_sr_{data}.svg', f'graph_sr_{data}.svg')
 
-    rw = RW(train_g)
-    rw.just_draw(50, f'hist_rw_{data}.svg', f'graph_rw_{data}.svg')
+    '''HISTOGRAMS ONLY
+    '''
+    fig, ax_hist = plt.subplots()
 
-    rwr = RWR(train_g, restart_prob=0.8)
-    rwr.just_draw(50, f'hist_rwr_{data}.svg', f'graph_rwr_{data}.svg')
+    w = 0.30
+    d = 0.2
+    x = -2*d
 
-    rwisg = RWISG(train_g)
-    rwisg.just_draw(20, f'hist_rwisg_{data}.svg', f'graph_rwisg_{data}.svg')
+    def brr(h):
+        global x
+        ax_hist.bar(x + 2*np.arange(h.shape[0]), h, w)
+        x += d
 
-    rwrisg = RWRISG(train_g, restart_prob=0.8)
-    rwrisg.just_draw(50, f'hist_rwrisg_{data}.svg', f'graph_rwrisg_{data}.svg')
+    print("================ SIMPLY RANDOM ==================")
+    _hist = just_hist(SimplyRandom, 1000)
+    brr(_hist)
+
+    print("================ RW ==================")
+    _hist = just_hist(RW, 1000)
+    brr(_hist)
+
+    print("================ RWR ==================")
+    _hist = just_hist(RWR, 1000)
+    brr(_hist)
+
+    print("================ RWISG ==================")
+    _hist = just_hist(RWISG, 300)
+    brr(_hist)
+
+    print("================ RWRISG ==================")
+    _hist = just_hist(RWRISG, 300)
+    brr(_hist)
+
+    _hist = normalized_hist(train_g)[0]
+    brr(_hist)
+
+    xlim = 20
+    ax_hist.set_xlim(0, xlim+1)
+    ax_hist.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    ax_hist.set_xticks(2*np.arange(xlim))
+    ax_hist.set_xticklabels(list(map(str, range(xlim))))
+
+    ax_hist.set(xlabel="Total Degree", ylabel="Probability, p(D)",
+         title=f"Total Degree Distribution of Minibatch Graphs ({data})")
+
+    plt.show()
+
+    '''Draw sample graphs
+    '''
+    # pencil(SimplyRandom, 'sr', 200)
+    # pencil(RW, 'rw', 200)
+    # pencil(RWR, 'rwr', 200)
+    # pencil(RWISG, 'rwisg', 100)
+    # pencil(RWRISG, 'rwrisg', 100)
+
+    # Make a separate list for each airline
+
+    # Assign colors for each airline and the names
+    # colors = ['#E69F00', '#56B4E9', '#F0E442', '#009E73', '#D55E00']
+    # names = ['United Air Lines Inc.', 'JetBlue Airways', 'ExpressJet Airlines Inc.'',
+    #                                                      'Delta Air Lines Inc.', 'American Airlines Inc.']
+
+    # Make the histogram using a list of lists
+    # Normalize the flights and assign colors and names
+    # plt.hist([x1, x2, x3, x4, x5], bins=int(180 / 15), normed=True,
+    #          color=colors, label=names)
+
+    # Plot formatting
+    # plt.legend()
+    # plt.xlabel('Delay (min)')
+    # plt.ylabel('Normalized Flights')
+    # plt.title('Side-by-Side Histogram with Multiple Airlines')
+
+
