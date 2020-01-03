@@ -13,7 +13,7 @@ import random
 [x] Increase number of batches for all estimates
 '''
 
-data = "FB15k-237"
+data = "DB100K"
 
 rel = open(f'./benchmarks/{data}/relations.dict', 'r')
 ent = open(f'./benchmarks/{data}/entities.dict', 'r')
@@ -366,7 +366,7 @@ def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
 
 
 def just_hist(SamplerClass, _bs):
-    nbatches = 40
+    nbatches = 2
     rp = 0.8
     print("\nTesting batch size", _bs)
     sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
@@ -416,15 +416,15 @@ if __name__=="__main__":
 
     '''HISTOGRAMS ONLY
     '''
-    fig, ax_hist = plt.subplots()
+    fig, ax_hist = plt.subplots(figsize=(6, 6))
 
-    w = 0.30
-    d = 0.2
+    w = 1.8/5
+    d = 1.2/5
     x = -2*d
 
     def brr(h):
         global x
-        ax_hist.bar(x + 2*np.arange(h.shape[0]), h, w)
+        ax_hist.bar(x + 2*np.arange(h.shape[0]), h, w, edgecolor='black')
         x += d
 
     print("================ SIMPLY RANDOM ==================")
@@ -450,15 +450,17 @@ if __name__=="__main__":
     _hist = normalized_hist(train_g)[0]
     brr(_hist)
 
-    xlim = 20
-    ax_hist.set_xlim(0, xlim+1)
+    # Not including zero
+    xlim = 10
+    ax_hist.set_xlim(1, 2*xlim + 1)
     ax_hist.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
-    ax_hist.set_xticks(2*np.arange(xlim))
-    ax_hist.set_xticklabels(list(map(str, range(xlim))))
+    ax_hist.set_xticks(2*np.arange(1, xlim+1))
+    ax_hist.set_xticklabels(list(map(str, range(1, xlim+1))))
 
     ax_hist.set(xlabel="Total Degree", ylabel="Probability, p(D)",
          title=f"Total Degree Distribution of Minibatch Graphs ({data})")
 
+    plt.tight_layout()
     plt.show()
 
     '''Draw sample graphs
