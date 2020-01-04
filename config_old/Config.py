@@ -19,7 +19,6 @@ def to_var(x, use_gpu):
         return Variable(torch.from_numpy(x))
 
 
-
 class Config(object):
     def __init__(self):
         base_file = os.path.abspath(
@@ -399,7 +398,7 @@ class Config(object):
         return self.lib.getValidHit10()
 
     def train(self):
-        print("alph:", self.alpha)
+        print("alpha:", self.alpha)
         print("nbatches:", self.nbatches)
         print("negative sampl rate:", self.negative_ent)
         print("dimension:", self.hidden_size, self.ent_size, self.rel_size)
