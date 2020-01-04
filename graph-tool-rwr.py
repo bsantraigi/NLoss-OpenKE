@@ -5,36 +5,14 @@ from pylab import *
 import random
 
 '''TODO:
-[ ] RWISG Hangs
 [x] Histograms (Side by side)
 [x] Expected Degree of whole KG (in ED vs BS)
 [x] Draw Graphs (With proper layouts)
-[ ] Data sampling code for RotatE: with replacement=False/True
 [x] Increase number of batches for all estimates
+[ ] Data sampling code for RotatE: with replacement=False/True
+[ ] RWISG Hangs
+[ ] Do the batch size experiment : WHEN DOES OUR METHOD WORKS FOR SMALL SCALE?
 '''
-
-data = "DB100K"
-
-rel = open(f'./benchmarks/{data}/relations.dict', 'r')
-ent = open(f'./benchmarks/{data}/entities.dict', 'r')
-train = open(f'./benchmarks/{data}/train.txt', 'r')
-test = open(f'./benchmarks/{data}/test.txt', 'r')
-valid = open(f'./benchmarks/{data}/valid.txt', 'r')
-# wr1 = open('./codes/train-fb.txt', 'w')
-
-ent_dict = {}
-rel_dict = {}
-relations = defaultdict(list)
-ents = {}
-
-for lines in rel:
-    l = lines.split()
-    rel_dict[l[1]] = (l[0])
-for lines in ent:
-    l = lines.split()
-    ent_dict[l[1]] = (l[0])
-    ents[l[0]] = l[1]
-
 
 def create_graph(dataFileHandle):
     g = Graph(directed=False)
@@ -63,23 +41,6 @@ def normalized_hist(g):
 
 
 def draw_hist_n_graph(g, hist_name="minibatch_hist.svg", graph_name="rw_mini.svg"):
-    out_hist = normalized_hist(g)
-
-    y = out_hist[0]
-
-    figure(figsize=(6, 4))
-    bar(out_hist[1][:-1], out_hist[0])
-    # errorbar(out_hist[1][:-1], out_hist[0], fmt="o", yerr=err,
-    #          label="in")
-    # gca().set_yscale("log")
-    # gca().set_xscale("log")
-    # gca().set_ylim(1e-1, 1e5)
-    gca().set_xlim(0, 30)
-    subplots_adjust(left=0.2, bottom=0.2)
-    xlabel("$k_{in}$")
-    ylabel("$NP(k_{in})$")
-    tight_layout()
-    savefig(f"plots/{hist_name}")
     pos = sfdp_layout(g)
     # pos = arf_layout(g, max_iter=1000, epsilon=1e-4)
 
@@ -345,7 +306,7 @@ def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
-    nbatches = 5
+    nbatches = 50
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
         print("\nTesting batch size", _bs)
@@ -366,7 +327,7 @@ def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
 
 
 def just_hist(SamplerClass, _bs):
-    nbatches = 2
+    nbatches = 60
     rp = 0.8
     print("\nTesting batch size", _bs)
     sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
@@ -384,84 +345,108 @@ def pencil(SamplerClass, tag, minib_size):
     s.just_draw(minib_size, f'hist_{tag}_{data}.svg', f'graph_{tag}_{data}.svg')
 
 if __name__=="__main__":
+    data = "FB15k-237"
+
+    rel = open(f'./benchmarks/{data}/relations.dict', 'r')
+    ent = open(f'./benchmarks/{data}/entities.dict', 'r')
+    train = open(f'./benchmarks/{data}/train.txt', 'r')
+    test = open(f'./benchmarks/{data}/test.txt', 'r')
+    valid = open(f'./benchmarks/{data}/valid.txt', 'r')
+    # wr1 = open('./codes/train-fb.txt', 'w')
+
+    ent_dict = {}
+    rel_dict = {}
+    relations = defaultdict(list)
+    ents = {}
+
+    for lines in rel:
+        l = lines.split()
+        rel_dict[l[1]] = (l[0])
+    for lines in ent:
+        l = lines.split()
+        ent_dict[l[1]] = (l[0])
+        ents[l[0]] = l[1]
+
     train_g = create_graph(train)
     print(train_g)
 
     '''E[D] plots only
     '''
-    # hist_full = normalized_hist(train_g)
-    # ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
-    #
-    # fig, ax = plt.subplots()
-    #
-    # bs_max = 800
-    # step = 100
-    # print("================ SIMPLY RANDOM ==================")
-    # ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
-    # print("================ RW ==================")
-    # ed_vs_bs(RW, ax, 30, bs_max, step)
-    # print("================ RWR ==================")
-    # ed_vs_bs(RWR, ax, 30, bs_max, step)
-    #
-    # bs_max = 250
-    # step = 25
-    # print("================ RWISG ==================")
-    # ed_vs_bs(RWISG, ax, 10, bs_max, step)
-    # print("================ RWRISG ==================")
-    # ed_vs_bs(RWRISG, ax, 10, bs_max, step)
-    #
-    # ax.axhline(ed_full, linestyle='--')
-    # ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    hist_full = normalized_hist(train_g)
+    ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
+
+    fig, ax = plt.subplots()
+
+    bs_max = 800
+    step = 100
+    print("================ SIMPLY RANDOM ==================")
+    ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
+    print("================ RW ==================")
+    ed_vs_bs(RW, ax, 30, bs_max, step)
+    print("================ RWR ==================")
+    ed_vs_bs(RWR, ax, 30, bs_max, step)
+
+    bs_max = 250
+    step = 25
+    print("================ RWISG ==================")
+    ed_vs_bs(RWISG, ax, 10, bs_max, step)
+    print("================ RWRISG ==================")
+    ed_vs_bs(RWRISG, ax, 10, bs_max, step)
+
+    ax.axhline(ed_full, linestyle='--')
+    ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+
+    plt.show()
 
 
     '''HISTOGRAMS ONLY
     '''
-    fig, ax_hist = plt.subplots(figsize=(6, 6))
-
-    w = 1.8/5
-    d = 1.2/5
-    x = -2*d
-
-    def brr(h):
-        global x
-        ax_hist.bar(x + 2*np.arange(h.shape[0]), h, w, edgecolor='black')
-        x += d
-
-    print("================ SIMPLY RANDOM ==================")
-    _hist = just_hist(SimplyRandom, 1000)
-    brr(_hist)
-
-    print("================ RW ==================")
-    _hist = just_hist(RW, 1000)
-    brr(_hist)
-
-    print("================ RWR ==================")
-    _hist = just_hist(RWR, 1000)
-    brr(_hist)
-
-    print("================ RWISG ==================")
-    _hist = just_hist(RWISG, 300)
-    brr(_hist)
-
-    print("================ RWRISG ==================")
-    _hist = just_hist(RWRISG, 300)
-    brr(_hist)
-
-    _hist = normalized_hist(train_g)[0]
-    brr(_hist)
-
-    # Not including zero
-    xlim = 10
-    ax_hist.set_xlim(1, 2*xlim + 1)
-    ax_hist.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
-    ax_hist.set_xticks(2*np.arange(1, xlim+1))
-    ax_hist.set_xticklabels(list(map(str, range(1, xlim+1))))
-
-    ax_hist.set(xlabel="Total Degree", ylabel="Probability, p(D)",
-         title=f"Total Degree Distribution of Minibatch Graphs ({data})")
-
-    plt.tight_layout()
-    plt.show()
+    # fig, ax_hist = plt.subplots(figsize=(6, 6))
+    #
+    # w = 1.8/5
+    # d = 1.2/5
+    # x = -2*d
+    #
+    # def brr(h):
+    #     global x
+    #     ax_hist.bar(x + 2*np.arange(h.shape[0]), h, w, edgecolor='black')
+    #     x += d
+    #
+    # print("================ SIMPLY RANDOM ==================")
+    # _hist = just_hist(SimplyRandom, 1000)
+    # brr(_hist)
+    #
+    # print("================ RW ==================")
+    # _hist = just_hist(RW, 1000)
+    # brr(_hist)
+    #
+    # print("================ RWR ==================")
+    # _hist = just_hist(RWR, 1000)
+    # brr(_hist)
+    #
+    # print("================ RWISG ==================")
+    # _hist = just_hist(RWISG, 300)
+    # brr(_hist)
+    #
+    # print("================ RWRISG ==================")
+    # _hist = just_hist(RWRISG, 300)
+    # brr(_hist)
+    #
+    # _hist = normalized_hist(train_g)[0]
+    # brr(_hist)
+    #
+    # # Not including zero
+    # xlim = 20
+    # ax_hist.set_xlim(1, 2*xlim + 1)
+    # ax_hist.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    # ax_hist.set_xticks(2*np.arange(1, xlim+1))
+    # ax_hist.set_xticklabels(list(map(str, range(1, xlim+1))))
+    #
+    # ax_hist.set(xlabel="Total Degree", ylabel="Probability, p(D)",
+    #      title=f"Total Degree Distribution of Minibatch Graphs ({data})")
+    #
+    # plt.tight_layout()
+    # plt.show()
 
     '''Draw sample graphs
     '''
