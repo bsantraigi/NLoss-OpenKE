@@ -16,7 +16,7 @@ from graph_tool_rwr import graph_from_txt_format
 [x] Draw Graphs (With proper layouts)
 [x] Increase number of batches for all estimates
 [ ] Data sampling code for RotatE: with replacement=False/True
-[ ] RWISG Hangs
+[x] RWISG Hangs
 [ ] Do the batch size experiment : WHEN DOES OUR METHOD WORKS FOR SMALL SCALE?
 '''
 
@@ -29,7 +29,7 @@ def f7(seq):
 
 def generate_train_data(g, relations, sampler_class, data_name):
     outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
-    target_size = 2*g.num_edges()
+    target_size = g.num_edges()
     mbs = 300
     s = sampler_class(train_g, restart_prob=0.8, minib_size=mbs)
     new_train = []
@@ -60,7 +60,7 @@ if __name__=="__main__":
     '''
     from timeit import default_timer as timer
     start = timer()
-    generate_train_data(train_g, train_relations, RWISG, data)
+    generate_train_data(train_g, train_relations, RWRISG, data)
     end = timer()
     print(end - start)
 

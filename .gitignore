@@ -6,6 +6,10 @@ __pycache__/
 **.json
 **_nl.txt
 
+# Data / result
+benchmarks/
+result/
+
 # Distribution / packaging
 .Python
 build/
@@ -27,6 +31,7 @@ MANIFEST
 checkpoint/
 .idea/
 plots/
+release/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

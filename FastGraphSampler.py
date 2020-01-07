@@ -13,7 +13,9 @@ class FastGraphSampler:
         self.minib_e = []
         self.minib_v = set()
 
+        # Stalling is edge based
         self.stall_limit = 10
+        self.stall_limit_reset = 10
 
     def sample_initial_vertex(self):
         v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
@@ -50,11 +52,11 @@ class FastGraphSampler:
                     print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
 
                 self.v = self.sample_initial_vertex()
-                self.stall_limit = 10
+                self.stall_limit = self.stall_limit_reset
 
             nxt = self._sample_single_nxt()
-            self.stall_limit = (self.stall_limit-1) if self._sample_size() == last_size else 10
-            last_size = self._sample_size()
+            self.stall_limit = (self.stall_limit-1) if len(self.minib_e) == last_size else self.stall_limit_reset
+            last_size = len(self.minib_e)
             self.v = nxt
 
             if self._sample_size() >= minib_size:
@@ -133,8 +135,6 @@ class RWISG(FastGraphSampler):
     def __init__(self, g, **kwargs):
         super(RWISG, self).__init__(g)
 
-        self.stall_limit = 10  # vertex based selection
-
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
         for v in self.minib_v:
@@ -168,7 +168,6 @@ class RWRISG(FastGraphSampler):
         assert 'restart_prob' in kwargs
         super(RWRISG, self).__init__(g)
         self.restart_prob = kwargs['restart_prob']
-        self.stall_limit = 10  # vertex based selection
 
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
