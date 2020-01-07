@@ -7,17 +7,18 @@ import matplotlib
 class FastGraphSampler:
     def __init__(self, g):
         self.g = g
-        self.v = self.sample_initial_vertex(g)
+        self.v = self.sample_initial_vertex()
 
         self.batch_triples = []
         self.minib_e = []
         self.minib_v = set()
 
-    @staticmethod
-    def sample_initial_vertex(g):
-        v = g.vertex(random.randint(0, g.num_vertices() - 1))
+        self.stall_limit = 10
+
+    def sample_initial_vertex(self):
+        v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
         while v.out_degree() == 0:
-            v = g.vertex(random.randint(0, g.num_vertices() - 1))
+            v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
         return v
 
     @staticmethod
@@ -29,16 +30,31 @@ class FastGraphSampler:
     def _refresh(self):
         self.minib_e = []
         self.minib_v = set()
-        self.v = self.sample_initial_vertex(self.g)
+        self.v = self.sample_initial_vertex()
 
     def sample(self, minib_size):
-        stall_limit = 4
+        # This will keep track of the subgraph size.
+        # If size increase rate slows down, v will be reset.
+        # The `stall_limit` kind of defines the tolerance
+        # of the sampler. A high stall_limit will lead to
+        # all the last remaining edges in a subgraph found
+        # and being added. Lower stall_limit will jump between
+        # subgraphs quickly.
+
+        last_size = 0
         while True:
-            if self.v.out_degree() == 0 or stall_limit == 0:
-                raise Exception(f"STALLED at {self.v}")
+            if self.v.out_degree() == 0 or self.stall_limit == 0:
+                # Raise exception or reset vertex!
+                # raise Exception(f"STALLED at {self.v}. {len(self.minib_v),len(self.minib_e)}")
+                if self.stall_limit == 0:
+                    print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
+
+                self.v = self.sample_initial_vertex()
+                self.stall_limit = 10
 
             nxt = self._sample_single_nxt()
-            stall_limit = (stall_limit-1) if self.v == nxt else 4
+            self.stall_limit = (self.stall_limit-1) if self._sample_size() == last_size else 10
+            last_size = self._sample_size()
             self.v = nxt
 
             if self._sample_size() >= minib_size:
@@ -46,8 +62,6 @@ class FastGraphSampler:
                 # draw_hist_n_graph(mini_g, hist_name="rwr_hist.svg", graph_name="rwr_graph.svg")
                 self._refresh()
                 return mini_g
-
-
 
     def _pack(self):
         raise NotImplementedError()
@@ -119,6 +133,8 @@ class RWISG(FastGraphSampler):
     def __init__(self, g, **kwargs):
         super(RWISG, self).__init__(g)
 
+        self.stall_limit = 10  # vertex based selection
+
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
         for v in self.minib_v:
@@ -134,7 +150,9 @@ class RWISG(FastGraphSampler):
         nxt = self.v
         self.minib_v.add(nxt)
         n_list = list(self.v.out_neighbors())
-        while nxt == self.v:
+        # if len(n_list) == 0:
+        #     raise Exception("No edge to follow! @", self.v)
+        while nxt == self.v:  # no self loop
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
         self.minib_e.append(self.g.edge(self.v, nxt))
@@ -150,7 +168,7 @@ class RWRISG(FastGraphSampler):
         assert 'restart_prob' in kwargs
         super(RWRISG, self).__init__(g)
         self.restart_prob = kwargs['restart_prob']
-        # self.v0 = self.v
+        self.stall_limit = 10  # vertex based selection
 
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')

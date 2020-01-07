@@ -1,3 +1,4 @@
+#!/home/bishal/miniconda3/bin/python
 from graph_tool.all import *
 # from graph_tool.draw import graph_draw
 from collections import defaultdict
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from FastGraphSampler import *
+from graph_tool_rwr import graph_from_txt_format
 
 '''TODO:
 [x] Histograms (Side by side)
@@ -19,172 +21,77 @@ from FastGraphSampler import *
 '''
 
 
-def create_graph(dataFileHandle):
-    g = Graph(directed=False)
-    # # Add all vertices
-    g.add_vertex(n=len(ent_dict))
-
-    edge_list = []
-    for i, lines in enumerate(dataFileHandle):   #(u,v) -> {rel1, rel2, ..}
-        if i == 0:
-            continue
-        lis = lines.split()
-        u, v = int(lis[0]), int(lis[2])
-        if u == v:
-            # SKIP SELF LOOP
-            continue
-        relations[(u, v)].append(lis[1])
-        edge_list.append((u, v))
-
-    print("# Edges:", len(edge_list))
-    g.add_edge_list(edge_list)
-    return g
+def f7(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-def just_draw(sampler, minib_size, graph_name):
-    mini_g = sampler.sample(minib_size)
-    print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
-    print("Got the minibatch grpah! Drawing now...")
+def generate_train_data(g, relations, sampler_class, data_name):
+    outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
+    target_size = 2*g.num_edges()
+    mbs = 300
+    s = sampler_class(train_g, restart_prob=0.8, minib_size=mbs)
+    new_train = []
 
-    pos = sfdp_layout(mini_g)
-    graph_draw(mini_g, pos=pos, output_size=(1000, 1000),
-               vertex_size=10, edge_pen_width=0.6,
-               vcmap=matplotlib.cm.gist_heat_r, output=f"plots/{graph_name}")
+    while len(new_train) < target_size:
+        minig = s.sample(mbs)
+        for edge in minig.get_edges():
+            u, v = edge
+            new_train.append((u, v, random.choice(relations[(u, v)])))
 
-
-def hist_n_stats(sampler, minib_size, nbatches):
-    print("Batches to sample:", nbatches)
-    max_d = 0
-    smooth_hist = []
-    sampler.batch_triples = []
-
-    while nbatches > 0:
-        mini_g = sampler.sample(minib_size)
-        print(f"Minibatch >>  ({mini_g.num_vertices()}, {mini_g.num_edges()})")
-
-        # Smooth histogram
-        out_hist = FastGraphSampler.normalized_hist(mini_g)
-        max_d = max(max_d, out_hist[1][-2] + 1)
-        smooth_hist.append(out_hist)
-
-        nbatches -= 1
-
-    # Average the histogram
-    all_hist = np.zeros((len(smooth_hist), int(max_d)))
-    print("Number of batches collected:", len(smooth_hist))
-    for i, d_hist in enumerate(smooth_hist):
-        all_hist[i, d_hist[1][:-1]] = d_hist[0]
-
-    smooth_hist = np.median(all_hist, 0)
-
-    ed = np.sum(smooth_hist * np.arange(smooth_hist.shape[0]))
-    print(f"Expected Degree:{ed}")
-
-    return np.mean(sampler.batch_triples), ed, smooth_hist
-
-
-def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
-    bss = []
-    eds = []
-
-    nbatches = 5
-    rp = 0.8
-    for _bs in np.arange(rng_start, rng_end, rng_step):
-        print("\nTesting batch size", _bs)
-        sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
-        bs, ed, _hist = hist_n_stats(sampler, _bs, nbatches)
-        print(bs, ed)
-
-        bss.append(bs)
-        eds.append(ed)
-
-    # Plot the last hist for now. May require to plot for
-    # particular batch size later!
-
-    print(f"Restart Prob was {rp}.")
-    ax_ed.plot(bss, eds, marker='x')
-    ax_ed.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
-              title=f"Expected Degree of Minibatch Graphs ({data})")
-
-
-def just_hist(SamplerClass, _bs):
-    nbatches = 60
-    rp = 0.8
-    print("\nTesting batch size", _bs)
-    sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
-    bs, ed, _hist = sampler.hist_n_stats(_bs, nbatches)
-    print(bs, ed)
-    # Plot the last hist for now. May require to plot for
-    # particular batch size later!
-
-    print(f"Restart Prob was {rp}.")
-    return _hist
-
-
-def pencil(SamplerClass, tag, minib_size):
-    print(f"\n>>> {tag} <<<\n")
-    s = SamplerClass(train_g, restart_prob=0.8, minib_size=minib_size)
-    s.just_draw(minib_size, f'hist_{tag}_{data}.svg', f'graph_{tag}_{data}.svg')
+    print(f"Total triples before uniq: {len(new_train)}")
+    print(f"Total triples uniq: {len(set(new_train))}")
+    print(f"Total triples uniq: {len(f7(new_train))}")
+    new_train = new_train[:target_size]
+    outFile.write(f"{target_size}\n")
+    for t in new_train:
+        outFile.write(f"{t[0]} {t[1]} {t[2]}\n")
+    outFile.close()
+    # return new_train
 
 
 if __name__=="__main__":
     data = "FB15K237"
-
-    rel = open(f'./benchmarks/{data}/relation2id.txt', 'r')
-    ent = open(f'./benchmarks/{data}/entity2id.txt', 'r')
-    train = open(f'./benchmarks/{data}/train2id.txt', 'r')
-    test = open(f'./benchmarks/{data}/test2id.txt', 'r')
-    valid = open(f'./benchmarks/{data}/valid2id.txt', 'r')
-    # wr1 = open('./codes/train-fb.txt', 'w')
-
-    ent_dict = {}
-    rel_dict = {}
-    relations = defaultdict(list)
-    ents = {}
-
-    for i, lines in enumerate(rel):
-        if i == 0:
-            continue
-        l = lines.split()
-        rel_dict[l[0]] = (l[1])
-
-    for i, lines in enumerate(ent):
-        if i == 0:
-            continue
-        l = lines.split()
-        ent_dict[l[0]] = (l[1])
-        ents[l[1]] = l[0]
-
-    train_g = create_graph(train)
+    train_g, train_relations = graph_from_txt_format(data)
     print(train_g)
+
+    '''Generate Training Data
+    '''
+    from timeit import default_timer as timer
+    start = timer()
+    generate_train_data(train_g, train_relations, RWISG, data)
+    end = timer()
+    print(end - start)
+
 
     '''E[D] plots only
     '''
-    hist_full = FastGraphSampler.normalized_hist(train_g)
-    ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
-
-    fig, ax = plt.subplots()
-
-    bs_max = 800
-    step = 100
-    print("================ SIMPLY RANDOM ==================")
-    ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
-    print("================ RW ==================")
-    ed_vs_bs(RW, ax, 30, bs_max, step)
-    print("================ RWR ==================")
-    ed_vs_bs(RWR, ax, 30, bs_max, step)
-
-    bs_max = 250
-    step = 25
-    print("================ RWISG ==================")
-    ed_vs_bs(RWISG, ax, 10, bs_max, step)
-    print("================ RWRISG ==================")
-    ed_vs_bs(RWRISG, ax, 10, bs_max, step)
-
-    ax.axhline(ed_full, linestyle='--')
-    ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
-
-    plt.show()
+    # hist_full = FastGraphSampler.normalized_hist(train_g)
+    # ed_full = np.sum(hist_full[0]*hist_full[1][:-1])
+    #
+    # fig, ax = plt.subplots()
+    #
+    # bs_max = 500
+    # step = 100
+    # print("================ SIMPLY RANDOM ==================")
+    # ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
+    # print("================ RW ==================")
+    # ed_vs_bs(RW, ax, 30, bs_max, step)
+    # print("================ RWR ==================")
+    # ed_vs_bs(RWR, ax, 30, bs_max, step)
+    #
+    # bs_max = 250
+    # step = 25
+    # print("================ RWISG ==================")
+    # ed_vs_bs(RWISG, ax, 10, bs_max, step)
+    # print("================ RWRISG ==================")
+    # ed_vs_bs(RWRISG, ax, 10, bs_max, step)
+    #
+    # ax.axhline(ed_full, linestyle='--')
+    # ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    #
+    # plt.show()
 
 
     '''HISTOGRAMS ONLY

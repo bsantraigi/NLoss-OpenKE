@@ -19,13 +19,80 @@ from FastGraphSampler import *
 '''
 
 
-def create_graph(dataFileHandle):
+def graph_from_txt_format(data):
+    rel = open(f'./benchmarks/{data}/relation2id.txt', 'r')
+    ent = open(f'./benchmarks/{data}/entity2id.txt', 'r')
+    data_file = open(f'./benchmarks/{data}/train2id.txt', 'r')
+    # test = open(f'./benchmarks/{data}/test2id.txt', 'r')
+    # valid = open(f'./benchmarks/{data}/valid2id.txt', 'r')
+    # wr1 = open('./codes/train-fb.txt', 'w')
+
+    ent_dict = {}
+    rel_dict = {}
+    relations = defaultdict(list)
+    ents = {}
+
+    for i, lines in enumerate(rel):
+        if i == 0:
+            continue
+        l = lines.split()
+        rel_dict[l[0]] = (l[1])
+
+    for i, lines in enumerate(ent):
+        if i == 0:
+            continue
+        l = lines.split()
+        ent_dict[l[0]] = (l[1])
+        ents[l[1]] = l[0]
+
+    g = Graph(directed=False)
+    # g.set_fast_edge_removal(fast=True)
+
+    # Add all vertices
+    g.add_vertex(n=len(ent_dict))
+
+    edge_list = []
+    for i, lines in enumerate(data_file):   #(u,v) -> {rel1, rel2, ..}
+        if i == 0:
+            continue
+        # h, t, r
+        lis = lines.split()
+        u, v = int(lis[0]), int(lis[1])
+        #if u == v:
+            # SKIP SELF LOOP
+        #    continue
+        relations[(u, v)].append(lis[2])
+        edge_list.append((u, v))
+
+    print("# Edges:", len(edge_list))
+    g.add_edge_list(edge_list)
+    return g, dict(relations)
+
+
+def graph_from_dict_format(data):
+    rel = open(f'./benchmarks/{data}/relations.dict', 'r')
+    ent = open(f'./benchmarks/{data}/entities.dict', 'r')
+    train = open(f'./benchmarks/{data}/train.txt', 'r')
+
+    ent_dict = {}
+    rel_dict = {}
+    relations = defaultdict(list)
+    ents = {}
+
+    for lines in rel:
+        l = lines.split()
+        rel_dict[l[1]] = (l[0])
+    for lines in ent:
+        l = lines.split()
+        ent_dict[l[1]] = (l[0])
+        ents[l[0]] = l[1]
+
     g = Graph(directed=False)
     # # Add all vertices
     g.add_vertex(n=len(ent_dict))
 
     edge_list = []
-    for lines in dataFileHandle:   #(u,v) -> {rel1, rel2, ..}
+    for lines in train:   #(u,v) -> {rel1, rel2, ..}
         lis = lines.split()
         u, v = int(ent_dict[lis[0]]), int(ent_dict[lis[2]])
         if u == v:
@@ -36,7 +103,7 @@ def create_graph(dataFileHandle):
 
     print("# Edges:", len(edge_list))
     g.add_edge_list(edge_list)
-    return g
+    return g, relations
 
 
 def just_draw(sampler, minib_size, graph_name):
@@ -126,29 +193,12 @@ def pencil(SamplerClass, tag, minib_size):
 
 
 if __name__=="__main__":
-    data = "FB15k-237"
+    data = "FB15K237"
+    train_g, train_relations = graph_from_txt_format(data)
 
-    rel = open(f'./benchmarks/{data}/relations.dict', 'r')
-    ent = open(f'./benchmarks/{data}/entities.dict', 'r')
-    train = open(f'./benchmarks/{data}/train.txt', 'r')
-    test = open(f'./benchmarks/{data}/test.txt', 'r')
-    valid = open(f'./benchmarks/{data}/valid.txt', 'r')
-    # wr1 = open('./codes/train-fb.txt', 'w')
+    # data = "FB15k-237"
+    # train_g = graph_from_dict_format(data)
 
-    ent_dict = {}
-    rel_dict = {}
-    relations = defaultdict(list)
-    ents = {}
-
-    for lines in rel:
-        l = lines.split()
-        rel_dict[l[1]] = (l[0])
-    for lines in ent:
-        l = lines.split()
-        ent_dict[l[1]] = (l[0])
-        ents[l[0]] = l[1]
-
-    train_g = create_graph(train)
     print(train_g)
 
     '''E[D] plots only
