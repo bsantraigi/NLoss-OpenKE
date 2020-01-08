@@ -3,8 +3,10 @@
 #include "Setting.h"
 #include <cstdlib>
 #include <random>
+#include <iostream>
 
 unsigned long long *next_random;
+using namespace std;
 
 extern "C"
 void randReset() {
@@ -63,6 +65,14 @@ void Uniform_Dist::init(INT s, INT e){
 
 INT Uniform_Dist::sample(){
 	return distr(generator);
+}
+
+extern "C"
+void initUniformDist(){
+	// Added by Bishal: Initialize an uniform distribution
+	cout << "Initialize Random with trainTotal: " << trainTotal << endl;
+	Uniform_Dist::Instance()->init(0, trainTotal);
+	cout << "Get sample: " <<Uniform_Dist::Instance()->sample() << endl;
 }
 
 #endif

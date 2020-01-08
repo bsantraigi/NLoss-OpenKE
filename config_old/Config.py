@@ -11,6 +11,7 @@ import ctypes
 import json
 import numpy as np
 import copy
+import csv
 
 def to_var(x, use_gpu):
     if use_gpu:
@@ -120,10 +121,20 @@ class Config(object):
         self.testModel = None
         self.pretrain_model = None
         self.use_gpu = True
+        self.trainFName = None
+
+    def set_train_fname(self, fname):
+        self.trainFName = fname
+
+    def re_read_train_file(self):
+        self.lib.importTrainFiles()
 
     def init(self):
         self.lib.setInPath(
             ctypes.create_string_buffer(self.in_path.encode(), len(self.in_path) * 2)
+        )
+        self.lib.setTrainFName(
+            ctypes.create_string_buffer(self.trainFName.encode(), len(self.trainFName) * 2)
         )
         self.lib.setBern(self.bern)
         self.lib.setWorkThreads(self.work_threads)
@@ -137,12 +148,16 @@ class Config(object):
         self.testTotal = self.lib.getTestTotal()
         self.validTotal = self.lib.getValidTotal()
 
+        # Initialize Random only after training file is read! TrainTotal needs to be set
+        self.lib.initUniformDist()
+
         self.batch_size = int(self.trainTotal / self.nbatches)
         print("Batch size:", self.batch_size)
 
         self.batch_seq_size = self.batch_size * (
             1 + self.negative_ent + self.negative_rel
         )
+        print("Batch seq size:", self.batch_seq_size)
         self.batch_h = np.zeros(self.batch_seq_size, dtype=np.int64)
         self.batch_t = np.zeros(self.batch_seq_size, dtype=np.int64)
         self.batch_r = np.zeros(self.batch_seq_size, dtype=np.int64)
@@ -210,7 +225,7 @@ class Config(object):
         self.in_path = in_path
 
     def set_nbatches(self, nbatches):
-        self.nbatches = nbatches
+        self.nbatches = int(nbatches)
 
     def set_p_norm(self, p_norm):
         self.p_norm = p_norm
@@ -397,7 +412,7 @@ class Config(object):
             self.lib.validTail(res.__array_interface__["data"][0])
         return self.lib.getValidHit10()
 
-    def train(self):
+    def train(self, validation_callback=None, validation_callback_steps=3):
         print("alpha:", self.alpha)
         print("nbatches:", self.nbatches)
         print("negative sampl rate:", self.negative_ent)
@@ -405,12 +420,25 @@ class Config(object):
         
         if not os.path.exists(self.checkpoint_dir):
             os.mkdir(self.checkpoint_dir)
+        if not os.path.isdir(self.result_dir):
+            os.mkdir(self.result_dir)
+        report_csv = open(f'{self.result_dir}/{self.trainFName}.csv', 'w', newline='')
+        fieldnames = ['epoch',
+                      'train.loss',
+                      'valid.hits@10']
+        report_writer = csv.DictWriter(report_csv, fieldnames=fieldnames)
+
+        report_writer.writeheader()
+
         best_epoch = 0
         best_hit10 = 0.0
         best_model = None
         bad_counts = 0
         for epoch in range(self.train_times):
             res = 0.0
+            if epoch > 0:
+                print()
+                # self.re_read_train_file()
             for batch in range(self.nbatches):
                 self.sampling()
                 loss = self.train_one_step()
@@ -419,9 +447,17 @@ class Config(object):
             if (epoch + 1) % self.save_steps == 0:
                 print("Epoch %d has finished, saving..." % (epoch))
                 self.save_checkpoint(self.trainModel.state_dict(), epoch)
+
+            if validation_callback is not None:
+                if (epoch + 1) % validation_callback_steps == 0:
+                    print("Callback >>")
+                    validation_callback()
+
             if (epoch + 1) % self.valid_steps == 0:
                 print("Epoch %d has finished, validating..." % (epoch))
                 hit10 = self.valid(self.trainModel)
+                report_writer.writerow({'epoch': epoch, 'valid.hits@10': hit10, 'train.loss': res})
+
                 if hit10 > best_hit10:
                     best_hit10 = hit10
                     best_epoch = epoch
@@ -437,14 +473,14 @@ class Config(object):
                 if bad_counts == self.early_stopping_patience:
                     print("Early stopping at epoch %d" % (epoch))
                     break
+
         if best_model == None:
             best_model = self.trainModel.state_dict()
             best_epoch = self.train_times - 1
             best_hit10 = self.valid(self.trainModel)
         print("Best epoch is %d | hit@10 of valid set is %f" % (best_epoch, best_hit10))
         print("Store checkpoint of best result at epoch %d..." % (best_epoch))
-        if not os.path.isdir(self.result_dir):
-            os.mkdir(self.result_dir)
+
         self.save_best_checkpoint(best_model)
         self.save_embedding_matrix(best_model)
         print("Finish storing")

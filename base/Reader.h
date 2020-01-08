@@ -24,7 +24,16 @@ Triple *trainRel;
 INT *testLef, *testRig;
 INT *validLef, *validRig;
 
-string train_fname = "train2id.txt";
+string train_fname = "train2id_x.txt";
+
+extern "C"
+void setTrainFName(char *fname) {
+	INT len = strlen(fname);
+	train_fname = "";
+	for (INT i = 0; i < len; i++)
+		train_fname = train_fname + fname[i];
+	printf("Change Train File Name : %s\n", train_fname.c_str());
+}
 
 extern "C"
 void importTrainFiles() {
@@ -45,10 +54,6 @@ void importTrainFiles() {
 
 	fin = fopen((inPath + train_fname).c_str(), "r");
 	tmp = fscanf(fin, "%ld", &trainTotal);
-
-	// Added by Bishal: Initialize an uniform distribution
-	cout << "Initialize Random" << endl;
-	Uniform_Dist::Instance()->init(0, trainTotal);
 
 	trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainHead = (Triple *)calloc(trainTotal, sizeof(Triple));
