@@ -6,21 +6,30 @@ import matplotlib
 
 class FastGraphSampler:
     def __init__(self, g):
-        self.g = g
-        self.v = self.sample_initial_vertex()
-
         self.batch_triples = []
         self.minib_e = set()
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 25
-        self.stall_limit_reset = 25
+        self.stall_limit = 15
+        self.stall_limit_reset = 15
+
+        self.g = g
+        self.visited = np.zeros((self.g.num_vertices()))
+        self.v = self.sample_initial_vertex()
+
+
 
     def sample_initial_vertex(self):
-        v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
+        vl = np.where(self.visited == 0)[0]
+        v = self.g.vertex(np.random.choice(vl))
         while v.out_degree() == 0:
-            v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
+            v = self.g.vertex(np.random.choice(vl))
+        self.visited[int(v)] = 1
+        self.minib_v.add(v)
+        # v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
+        # while v.out_degree() == 0:
+        #     v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
         return v
 
     @staticmethod
@@ -55,6 +64,7 @@ class FastGraphSampler:
                 self.stall_limit = self.stall_limit_reset
 
             nxt = self._sample_single_nxt()
+            self.visited[int(nxt)] = 1
             self.stall_limit = (self.stall_limit-1) if len(self.minib_e) == last_size else self.stall_limit_reset
             last_size = len(self.minib_e)
             self.v = nxt

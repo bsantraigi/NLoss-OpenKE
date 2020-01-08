@@ -66,7 +66,7 @@ def graph_from_txt_format(data):
 
     print("# Edges:", len(edge_list))
     g.add_edge_list(edge_list)
-    return g, dict(relations)
+    return g, dict(relations), edge_list
 
 
 def graph_from_dict_format(data):
