@@ -10,12 +10,12 @@ class FastGraphSampler:
         self.v = self.sample_initial_vertex()
 
         self.batch_triples = []
-        self.minib_e = []
+        self.minib_e = set()
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 10
-        self.stall_limit_reset = 10
+        self.stall_limit = 25
+        self.stall_limit_reset = 25
 
     def sample_initial_vertex(self):
         v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
@@ -30,7 +30,7 @@ class FastGraphSampler:
         return out_hist
 
     def _refresh(self):
-        self.minib_e = []
+        self.minib_e = set()
         self.minib_v = set()
         self.v = self.sample_initial_vertex()
 
@@ -81,8 +81,18 @@ class RW(FastGraphSampler):
 
     def _pack(self):
         self.batch_triples.append(len(self.minib_e))
-        mini_g = Graph(directed=False)
-        mini_g.add_edge_list(self.minib_e, hashed=True)
+
+        efilt = self.g.new_edge_property('bool')
+        for edge in self.minib_e:
+            efilt[edge] = True
+
+        # Induced Subgraph
+        mini_g = GraphView(self.g, efilt=efilt)
+        # print(f"Induced MiniG: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+
+        # OLD METHOD
+        # mini_g = Graph(directed=False)
+        # mini_g.add_edge_list(self.minib_e, hashed=True)
         return mini_g
 
     def _sample_single_nxt(self):
@@ -91,7 +101,7 @@ class RW(FastGraphSampler):
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
-        self.minib_e.append(self.g.edge(self.v, nxt))
+        self.minib_e.add(self.g.edge(self.v, nxt))
         return nxt
 
     def _sample_size(self):
@@ -106,9 +116,14 @@ class RWR(FastGraphSampler):
 
     def _pack(self):
         self.batch_triples.append(len(self.minib_e))
-        mini_g = Graph(directed=False)
-        mini_g.add_edge_list(self.minib_e, hashed=True)
-        # print(f"RWR Minibatch: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+
+        efilt = self.g.new_edge_property('bool')
+        for edge in self.minib_e:
+            efilt[edge] = True
+
+        # Induced Subgraph
+        mini_g = GraphView(self.g, efilt=efilt)
+
         return mini_g
 
     def _sample_single_nxt(self):
@@ -123,7 +138,7 @@ class RWR(FastGraphSampler):
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
-        self.minib_e.append(self.g.edge(self.v, nxt))
+        self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
 
@@ -155,7 +170,7 @@ class RWISG(FastGraphSampler):
         while nxt == self.v:  # no self loop
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
-        self.minib_e.append(self.g.edge(self.v, nxt))
+        self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
 
@@ -192,7 +207,7 @@ class RWRISG(FastGraphSampler):
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
-        self.minib_e.append(self.g.edge(self.v, nxt))
+        self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
 

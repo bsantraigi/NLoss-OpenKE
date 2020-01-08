@@ -103,7 +103,7 @@ def graph_from_dict_format(data):
 
     print("# Edges:", len(edge_list))
     g.add_edge_list(edge_list)
-    return g, relations
+    return g, dict(relations)
 
 
 def just_draw(sampler, minib_size, graph_name):
@@ -208,19 +208,19 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    # bs_max = 800
-    # step = 100
-    # print("================ SIMPLY RANDOM ==================")
-    # ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
-    # print("================ RW ==================")
-    # ed_vs_bs(RW, ax, 30, bs_max, step)
-    # print("================ RWR ==================")
-    # ed_vs_bs(RWR, ax, 30, bs_max, step)
+    bs_max = 800
+    step = 100
+    print("================ SIMPLY RANDOM ==================")
+    ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
+    print("================ RW ==================")
+    ed_vs_bs(RW, ax, 30, bs_max, step)
+    print("================ RWR ==================")
+    ed_vs_bs(RWR, ax, 30, bs_max, step)
 
     bs_max = 250
     step = 25
-    # print("================ RWISG ==================")
-    # ed_vs_bs(RWISG, ax, 10, bs_max, step)
+    print("================ RWISG ==================")
+    ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")
     ed_vs_bs(RWRISG, ax, 10, bs_max, step)
 

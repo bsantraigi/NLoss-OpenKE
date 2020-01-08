@@ -60,7 +60,7 @@ if __name__=="__main__":
     '''
     from timeit import default_timer as timer
     start = timer()
-    generate_train_data(train_g, train_relations, RWRISG, data)
+    generate_train_data(train_g, train_relations, RWISG, data)
     end = timer()
     print(end - start)
 
