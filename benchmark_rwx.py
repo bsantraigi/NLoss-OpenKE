@@ -16,7 +16,7 @@ from timeit import default_timer as timer
 [x] Expected Degree of whole KG (in ED vs BS)
 [x] Draw Graphs (With proper layouts)
 [x] Increase number of batches for all estimates
-[ ] Data sampling code for RotatE: with replacement=False/True
+[x] Data sampling code for RotatE: with replacement=False/True
 [x] RWISG Hangs
 [ ] Do the batch size experiment : WHEN DOES OUR METHOD WORKS FOR SMALL SCALE?
 '''
@@ -30,7 +30,7 @@ def f7(seq):
 
 def generate_train_data(g, relations, edges, sampler_class, data_name):
     outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
-    mbs = 300
+    mbs = 2000
     s = sampler_class(g, restart_prob=0.8, minib_size=mbs)
 
     start = timer()
@@ -45,18 +45,18 @@ def generate_train_data(g, relations, edges, sampler_class, data_name):
             new_train.append((u, v, random.choice(relations[(u, v)])))
             sampled_edges_undir.append((u, v))
 
-    end = timer()
+    # end = timer()
 
     remaining_edges = set(edges) - set(sampled_edges_undir)
 
-    print(f"Total triples before uniq: {len(new_train)}")
-    print(f"Total triples uniq: {len(f7(new_train))}")
-    print(end - start, "sec")
+    # print(f"Total triples before uniq: {len(new_train)}")
+    # print(f"Total triples uniq: {len(f7(new_train))}")
+    # print(end - start, "sec")
 
     '''Stage 2
     '''
-    print("Stage 2")
-    print(f"Remaining {len(remaining_edges)} edges")
+    # print("Stage 2")
+    # print(f"Remaining {len(remaining_edges)} edges")
     g = Graph(directed=False)
     g.add_edge_list(remaining_edges)
 
@@ -66,7 +66,7 @@ def generate_train_data(g, relations, edges, sampler_class, data_name):
     #         g.remove_edge(e)
 
     target_size = 2*g.num_edges()
-    print(f"Stage 2: Sample from remaining G({g.num_vertices()},{g.num_edges()})")
+    # print(f"Stage 2: Sample from remaining G({g.num_vertices()},{g.num_edges()})")
     s = sampler_class(g, restart_prob=0.8, minib_size=mbs)
     new_train2 = []
     while len(new_train2) < target_size:
@@ -76,14 +76,14 @@ def generate_train_data(g, relations, edges, sampler_class, data_name):
             new_train2.append((u, v, random.choice(relations[(u, v)])))
 
     end = timer()
-    print(end - start, "sec")
 
     new_train += new_train2
+
     # print(f"Visited {100 * np.sum(s.visited) / g.num_vertices():0.4}% vertices.")
-    print(f"Total triples before uniq: {len(new_train)}")
-    print(f"Total triples uniq: {len(f7(new_train))}")
+    # print(f"Total triples before uniq: {len(new_train)}")
 
     new_train = f7(new_train)[:target_size]
+    print(f"[{end - start:0.4} sec]: Total triples uniq: {len(new_train)}")
     outFile.write(f"{target_size}\n")
     for t in new_train:
         outFile.write(f"{t[0]} {t[1]} {t[2]}\n")
@@ -91,15 +91,22 @@ def generate_train_data(g, relations, edges, sampler_class, data_name):
     # return new_train
 
 
+class Gen:
+    def __init__(self, data):
+        self.train_g, self.train_relations, self.train_edges = graph_from_txt_format(data)
+        self.data = data
+
+    def __call__(self, *args, **kwargs):
+        """
+        Generate Training Data
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        generate_train_data(self.train_g, self.train_relations, self.train_edges, RWISG, self.data)
+
 def main():
-    data = "FB15K237"
-    train_g, train_relations, train_edges = graph_from_txt_format(data)
-    print(train_g)
-
-    '''Generate Training Data
-    '''
-    generate_train_data(train_g, train_relations, train_edges, RWISG, data)
-
+    data = "WN18RR"
 
     '''E[D] plots only
     '''

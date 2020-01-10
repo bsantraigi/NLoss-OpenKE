@@ -119,11 +119,12 @@ void* getBatch_lessRandom(void* con) {
 }
 
 extern "C"
-void sampling(INT *batch_h, INT *batch_t, INT *batch_r, REAL *batch_y, INT batchSize, INT negRate = 1, INT negRelRate = 0) {
-	INT u = Uniform_Dist::Instance()->sample();
-	INT offset = min(u, trainTotal - batchSize);
+void sampling(INT *batch_h, INT *batch_t, INT *batch_r, REAL *batch_y, INT batchSize, INT offset, INT negRate = 1, INT negRelRate = 0) {
+//	INT u = Uniform_Dist::Instance()->sample();
+//	INT offset = min(u, trainTotal - batchSize);
 //	INT offset = 0;
-//	 cout << "Offset: " << offset << " u:" << u << endl;
+//	cout << "Offset: " << offset << " u:" << u << endl;
+//	cout << "Offset: " << offset << endl;
 	pthread_t *pt = (pthread_t *)malloc(workThreads * sizeof(pthread_t));
 	Parameter *para = (Parameter *)malloc(workThreads * sizeof(Parameter));
 	for (INT threads = 0; threads < workThreads; threads++) {

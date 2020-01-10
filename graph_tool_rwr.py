@@ -8,16 +8,6 @@ import numpy as np
 
 from FastGraphSampler import *
 
-'''TODO:
-[x] Histograms (Side by side)
-[x] Expected Degree of whole KG (in ED vs BS)
-[x] Draw Graphs (With proper layouts)
-[x] Increase number of batches for all estimates
-[ ] Data sampling code for RotatE: with replacement=False/True
-[ ] RWISG Hangs
-[ ] Do the batch size experiment : WHEN DOES OUR METHOD WORKS FOR SMALL SCALE?
-'''
-
 
 def graph_from_txt_format(data):
     rel = open(f'./benchmarks/{data}/relation2id.txt', 'r')
@@ -64,7 +54,7 @@ def graph_from_txt_format(data):
         relations[(u, v)].append(lis[2])
         edge_list.append((u, v))
 
-    print("# Edges:", len(edge_list))
+    # print("# Edges:", len(edge_list))
     g.add_edge_list(edge_list)
     return g, dict(relations), edge_list
 
@@ -142,7 +132,8 @@ def hist_n_stats(sampler, minib_size, nbatches):
 
     smooth_hist = np.median(all_hist, 0)
 
-    ed = np.sum(smooth_hist * np.arange(smooth_hist.shape[0]))
+    # Degree 0 is ignored
+    ed = np.sum(smooth_hist * (1+np.arange(smooth_hist.shape[0])))
     print(f"Expected Degree:{ed}")
 
     return np.mean(sampler.batch_triples), ed, smooth_hist
@@ -193,11 +184,11 @@ def pencil(SamplerClass, tag, minib_size):
 
 
 if __name__=="__main__":
-    data = "FB15K237"
-    train_g, train_relations = graph_from_txt_format(data)
+    # data = "DB100K"
+    # train_g, train_relations = graph_from_dict_format(data)
 
-    # data = "FB15k-237"
-    # train_g = graph_from_dict_format(data)
+    data = "FB15K237"
+    train_g, train_relations, _ = graph_from_txt_format(data)
 
     print(train_g)
 
@@ -208,8 +199,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 800
-    step = 100
+    bs_max = 30000
+    step = 1200
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
@@ -217,8 +208,8 @@ if __name__=="__main__":
     print("================ RWR ==================")
     ed_vs_bs(RWR, ax, 30, bs_max, step)
 
-    bs_max = 250
-    step = 25
+    bs_max = 4200
+    step = 200
     print("================ RWISG ==================")
     ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")

@@ -11,14 +11,20 @@ class FastGraphSampler:
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 15
-        self.stall_limit_reset = 15
+        self.stall_limit = 5
+        self.stall_limit_reset = 5
 
         self.g = g
         self.visited = np.zeros((self.g.num_vertices()))
         self.v = self.sample_initial_vertex()
 
-
+    @staticmethod
+    def normalized_hist(g):
+        out_hist = vertex_hist(g, "out")
+        # Drop the lone vertices
+        out_hist[0] = out_hist[0][1:] / np.sum(out_hist[0][1:])
+        out_hist[1] = out_hist[1][1:]
+        return out_hist
 
     def sample_initial_vertex(self):
         vl = np.where(self.visited == 0)[0]
@@ -31,12 +37,6 @@ class FastGraphSampler:
         # while v.out_degree() == 0:
         #     v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
         return v
-
-    @staticmethod
-    def normalized_hist(g):
-        out_hist = vertex_hist(g, "out")
-        out_hist[0] = out_hist[0] / np.sum(out_hist[0])
-        return out_hist
 
     def _refresh(self):
         self.minib_e = set()
@@ -58,7 +58,8 @@ class FastGraphSampler:
                 # Raise exception or reset vertex!
                 # raise Exception(f"STALLED at {self.v}. {len(self.minib_v),len(self.minib_e)}")
                 if self.stall_limit == 0:
-                    print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
+                    # print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
+                    print(f".", end="")
 
                 self.v = self.sample_initial_vertex()
                 self.stall_limit = self.stall_limit_reset

@@ -355,13 +355,14 @@ class Config(object):
         self.testModel.eval()
         print("Finish initializing")
 
-    def sampling(self):
+    def sampling(self, offset):
         self.lib.sampling(
             self.batch_h_addr,
             self.batch_t_addr,
             self.batch_r_addr,
             self.batch_y_addr,
             self.batch_size,
+            offset,
             self.negative_ent,
             self.negative_rel,
         )
@@ -440,7 +441,7 @@ class Config(object):
                 print()
                 # self.re_read_train_file()
             for batch in range(self.nbatches):
-                self.sampling()
+                self.sampling(batch*self.batch_size)
                 loss = self.train_one_step()
                 res += loss
             print("Epoch %d | loss: %f" % (epoch, res))
