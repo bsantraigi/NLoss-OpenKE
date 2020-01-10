@@ -247,3 +247,35 @@ class SimplyRandom(FastGraphSampler):
 
     def _sample_size(self):
         return len(self.minib_e)
+
+
+class RWISG_NLoss(FastGraphSampler):
+    def __init__(self, g, **kwargs):
+        super(RWISG_NLoss, self).__init__(g)
+
+    def _pack(self):
+        vfilt = self.g.new_vertex_property('bool')
+        for v in self.minib_v:
+            vfilt[v] = True
+
+        # Induced Subgraph
+        mini_g = GraphView(self.g, vfilt=vfilt)
+        # print(f"Induced MiniG: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
+        self.batch_triples.append(mini_g.num_edges())
+        return mini_g
+
+    def _sample_single_nxt(self):
+        nxt = self.v
+        self.minib_v.add(nxt)
+        n_list = list(self.v.out_neighbors())
+        # if len(n_list) == 0:
+        #     raise Exception("No edge to follow! @", self.v)
+        while nxt == self.v:  # no self loop
+            k = random.randint(0, len(n_list) - 1)
+            nxt = n_list[k]
+        self.minib_e.add(self.g.edge(self.v, nxt))
+
+        return nxt
+
+    def _sample_size(self):
+        return len(self.minib_v)

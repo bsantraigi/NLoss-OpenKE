@@ -413,7 +413,7 @@ class Config(object):
             self.lib.validTail(res.__array_interface__["data"][0])
         return self.lib.getValidHit10()
 
-    def train(self, validation_callback=None, validation_callback_steps=3):
+    def train(self, callback=None, callback_steps=3):
         print("alpha:", self.alpha)
         print("nbatches:", self.nbatches)
         print("negative sampl rate:", self.negative_ent)
@@ -449,10 +449,10 @@ class Config(object):
                 print("Epoch %d has finished, saving..." % (epoch))
                 self.save_checkpoint(self.trainModel.state_dict(), epoch)
 
-            if validation_callback is not None:
-                if (epoch + 1) % validation_callback_steps == 0:
+            if callback is not None:
+                if (epoch + 1) % callback_steps == 0:
                     print("Callback >>")
-                    validation_callback()
+                    callback()
 
             if (epoch + 1) % self.valid_steps == 0:
                 print("Epoch %d has finished, validating..." % (epoch))

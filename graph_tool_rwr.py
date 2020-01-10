@@ -42,21 +42,24 @@ def graph_from_txt_format(data):
     g.add_vertex(n=len(ent_dict))
 
     edge_list = []
+    triple_list = []
     for i, lines in enumerate(data_file):   #(u,v) -> {rel1, rel2, ..}
         if i == 0:
             continue
         # h, t, r
         lis = lines.split()
         u, v = int(lis[0]), int(lis[1])
+        r = lis[2]
         #if u == v:
             # SKIP SELF LOOP
         #    continue
-        relations[(u, v)].append(lis[2])
+        relations[(u, v)].append(r)
         edge_list.append((u, v))
+        triple_list.append((u, v, r))
 
     # print("# Edges:", len(edge_list))
     g.add_edge_list(edge_list)
-    return g, dict(relations), edge_list
+    return g, dict(relations), edge_list, triple_list
 
 
 def graph_from_dict_format(data):
@@ -199,8 +202,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 30000
-    step = 1200
+    bs_max = 10000
+    step = 2000
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
@@ -208,8 +211,8 @@ if __name__=="__main__":
     print("================ RWR ==================")
     ed_vs_bs(RWR, ax, 30, bs_max, step)
 
-    bs_max = 4200
-    step = 200
+    bs_max = 1500
+    step = 300
     print("================ RWISG ==================")
     ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")
