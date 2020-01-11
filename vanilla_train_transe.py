@@ -3,15 +3,17 @@ from models import *
 import json
 import os
 import benchmark_rwx
+from FastGraphSampler import *
 # data = "WN18RR"
 
-
+_SAMPLER_ = RWISG_NLoss
+BS = 800
 def resample_data(_data):
-    data_gen = benchmark_rwx.Gen(_data)
+    data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
 
     def method():
         # return
-        data_gen(1500)
+        data_gen(BS)
 
     return method
 
@@ -21,11 +23,11 @@ data = "FB15K237"
 callback_sampler = resample_data(data)
 callback_sampler()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 con = config.Config()
 con.set_use_gpu(True)
 con.set_in_path(f"./benchmarks/{data}/")
-con.set_train_fname("train2id_RWISG.txt")
+con.set_train_fname(f"train2id_{_SAMPLER_.__name__}.txt")
 # con.set_train_fname("train2id.txt")
 con.set_work_threads(12)
 con.set_train_times(10000)
@@ -53,4 +55,4 @@ con.set_test_triple(True)
 con.init()
 # con.set_train_model(TransE)
 con.set_train_model(TransESoftLoss)
-con.train(callback=callback_sampler, callback_steps=1)
+con.train(callback=callback_sampler, callback_steps=5)

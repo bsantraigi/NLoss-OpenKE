@@ -142,7 +142,7 @@ def hist_n_stats(sampler, minib_size, nbatches):
     return np.mean(sampler.batch_triples), ed, smooth_hist
 
 
-def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
+def ed_vs_bs(SamplerClass, plt_axis_ed, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
@@ -161,9 +161,9 @@ def ed_vs_bs(SamplerClass, ax_ed, rng_start, rng_end, rng_step):
     # particular batch size later!
 
     print(f"Restart Prob was {rp}.")
-    ax_ed.plot(bss, eds, marker='x')
-    ax_ed.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
-              title=f"Expected Degree of Minibatch Graphs ({data})")
+    plt_axis_ed.plot(bss, eds, marker='x')
+    plt_axis_ed.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
+                    title=f"Expected Degree of Minibatch Graphs ({data})")
 
 
 def just_hist(SamplerClass, _bs):
@@ -191,7 +191,7 @@ if __name__=="__main__":
     # train_g, train_relations = graph_from_dict_format(data)
 
     data = "FB15K237"
-    train_g, train_relations, _ = graph_from_txt_format(data)
+    train_g, train_relations, _, _ = graph_from_txt_format(data)
 
     print(train_g)
 
@@ -202,8 +202,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 10000
-    step = 2000
+    bs_max = 16000
+    step = 2500
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
@@ -211,15 +211,20 @@ if __name__=="__main__":
     print("================ RWR ==================")
     ed_vs_bs(RWR, ax, 30, bs_max, step)
 
-    bs_max = 1500
+    bs_max = 1600
     step = 300
     print("================ RWISG ==================")
     ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")
     ed_vs_bs(RWRISG, ax, 10, bs_max, step)
 
+    bs_max = 1600
+    step = 300
+    print("================ RWISG_NLoss ==================")
+    ed_vs_bs(RWISG_NLoss, ax, 10, bs_max, step)
+
     ax.axhline(ed_full, linestyle='--')
-    ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'Full KG'])
+    ax.legend(['SR', 'RW', 'RWR', 'RWISG', 'RWRISG', 'RWIS+', 'Full KG'])
 
     plt.show()
 
