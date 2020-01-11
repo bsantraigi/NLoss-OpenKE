@@ -1,25 +1,6 @@
-#!/home/bishal/miniconda3/bin/python
-from graph_tool.all import *
-# from graph_tool.draw import graph_draw
-from collections import defaultdict
-# from pylab import *
-# import random
-import matplotlib.pyplot as plt
-import numpy as np
-
 from FastGraphSampler import *
 from graph_tool_rwr import graph_from_txt_format
 from timeit import default_timer as timer
-
-'''TODO:
-[x] Histograms (Side by side)
-[x] Expected Degree of whole KG (in ED vs BS)
-[x] Draw Graphs (With proper layouts)
-[x] Increase number of batches for all estimates
-[x] Data sampling code for RotatE: with replacement=False/True
-[x] RWISG Hangs
-[ ] Do the batch size experiment : WHEN DOES OUR METHOD WORKS FOR SMALL SCALE?
-'''
 
 
 def f7(seq):
@@ -82,7 +63,7 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
     # print(f"Visited {100 * np.sum(s.visited) / g.num_vertices():0.4}% vertices.")
     # print(f"Total triples before uniq: {len(new_train)}")
 
-    new_train = f7(new_train)[:target_size]
+    # new_train = f7(new_train)[:target_size]
     remaining_triples = list(set(triples).difference(new_train))
     new_train = new_train + remaining_triples
     print(f"[{end - start:0.4} sec]: Total triples uniq: {len(new_train)}")
@@ -95,25 +76,27 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
 
 
 class Gen:
-    def __init__(self, data):
+    def __init__(self, data, sampler):
         self.train_g, self.train_relations, self.train_edges, self.train_triples = graph_from_txt_format(data)
         self.data = data
+        self.sampler = sampler
 
     def __call__(self, bs=2000):
-        """
-        Generate Training Data
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        generate_train_data(self.train_g, self.train_relations, self.train_edges, self.train_triples, RWISG, bs, self.data)
+        generate_train_data(self.train_g,
+                            self.train_relations,
+                            self.train_edges,
+                            self.train_triples,
+                            self.sampler,
+                            bs,
+                            self.data)
+
 
 def main():
-    data = "WN18RR"
+    data = "FB15K237"
 
     '''E[D] plots only
     '''
-    data_gen = Gen(data)
+    data_gen = Gen(data, RWISG_NLoss)
     data_gen(1500)
 
 

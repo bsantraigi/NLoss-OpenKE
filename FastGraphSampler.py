@@ -262,6 +262,24 @@ class RWISG_NLoss(FastGraphSampler):
         mini_g = GraphView(self.g, vfilt=vfilt)
         # print(f"Induced MiniG: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
         self.batch_triples.append(mini_g.num_edges())
+
+        # Get edges
+        efilt = self.g.new_edge_property('bool')
+        for e in mini_g.edges():
+            efilt[e] = True
+
+        for v in mini_g.vertices():
+            neighbors_v = self.g.get_all_edges(v)
+            np.random.shuffle(neighbors_v)
+            for y, z in neighbors_v[:20]:
+                efilt[self.g.edge(y, z)] = True
+
+        # for v in mini_g.vertices():
+        #     for y, z in self.g.get_all_edges(v)[:20]:
+        #         efilt[self.g.edge(y, z)] = True
+
+        mini_g = GraphView(self.g, efilt=efilt)
+        # print(f"reInduced MiniG: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
         return mini_g
 
     def _sample_single_nxt(self):
