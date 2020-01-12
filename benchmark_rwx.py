@@ -46,7 +46,7 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
     #     if e is not None:
     #         g.remove_edge(e)
 
-    target_size = 2*g.num_edges()
+    target_size = g.num_edges()
     # print(f"Stage 2: Sample from remaining G({g.num_vertices()},{g.num_edges()})")
     s = sampler_class(g, restart_prob=0.8, minib_size=bs)
     new_train2 = []
@@ -65,8 +65,10 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
 
     # new_train = f7(new_train)[:target_size]
     remaining_triples = list(set(triples).difference(new_train))
+    print(f"[{end - start:0.4} sec]: Total triples: {len(new_train)}, uniq: {len(f7(new_train))}")
+
+    # Add the remaining
     new_train = new_train + remaining_triples
-    print(f"[{end - start:0.4} sec]: Total triples uniq: {len(new_train)}")
 
     outFile.write(f"{len(new_train)}\n")
     for t in new_train:
@@ -78,10 +80,11 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
 class Gen:
     def __init__(self, data, sampler):
         self.train_g, self.train_relations, self.train_edges, self.train_triples = graph_from_txt_format(data)
+        print(self.train_g)
         self.data = data
         self.sampler = sampler
 
-    def __call__(self, bs=2000):
+    def __call__(self, bs=800):
         generate_train_data(self.train_g,
                             self.train_relations,
                             self.train_edges,
@@ -96,8 +99,8 @@ def main():
 
     '''E[D] plots only
     '''
-    data_gen = Gen(data, RWISG_NLoss)
-    data_gen(1500)
+    data_gen = Gen(data, RWISG)
+    data_gen(800)
 
 
 if __name__=="__main__":

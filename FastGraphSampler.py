@@ -11,8 +11,8 @@ class FastGraphSampler:
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 5
-        self.stall_limit_reset = 5
+        self.stall_limit = 15
+        self.stall_limit_reset = 15
 
         self.g = g
         self.visited = np.zeros((self.g.num_vertices()))
@@ -27,6 +27,9 @@ class FastGraphSampler:
         return out_hist
 
     def sample_initial_vertex(self):
+        if np.sum(self.visited) == self.g.num_vertices():
+            print(f"+", end="")
+            self.visited = np.zeros((self.g.num_vertices()))
         vl = np.where(self.visited == 0)[0]
         v = self.g.vertex(np.random.choice(vl))
         while v.out_degree() == 0:
@@ -238,7 +241,8 @@ class SimplyRandom(FastGraphSampler):
     def _pack(self):
         self.batch_triples.append(len(self.minib_e))
         mini_g = Graph(directed=False)
-        mini_g.add_edge_list(self.minib_e, hashed=True)
+        # mini_g.add_edge_list(self.minib_e, hashed=True)
+        mini_g.add_edge_list(self.minib_e)
         return mini_g
 
     def _sample_single_nxt(self):

@@ -16,6 +16,7 @@ INT *lefTail, *rigTail;
 INT *lefRel, *rigRel;
 REAL *left_mean, *right_mean;
 
+Triple *_trainList;
 Triple *trainList;
 Triple *trainHead;
 Triple *trainTail;
@@ -56,36 +57,47 @@ void importTrainFiles() {
 	tmp = fscanf(fin, "%ld", &trainTotal);
 
 	trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
+	_trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainHead = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainTail = (Triple *)calloc(trainTotal, sizeof(Triple));
 	trainRel = (Triple *)calloc(trainTotal, sizeof(Triple));
 	freqRel = (INT *)calloc(relationTotal, sizeof(INT));
 	freqEnt = (INT *)calloc(entityTotal, sizeof(INT));
 	for (INT i = 0; i < trainTotal; i++) {
-		tmp = fscanf(fin, "%ld", &trainList[i].h);
-		tmp = fscanf(fin, "%ld", &trainList[i].t);
-		tmp = fscanf(fin, "%ld", &trainList[i].r);
+		tmp = fscanf(fin, "%ld", &_trainList[i].h);
+		tmp = fscanf(fin, "%ld", &_trainList[i].t);
+		tmp = fscanf(fin, "%ld", &_trainList[i].r);
 	}
 	fclose(fin);
-	std::sort(trainList, trainList + trainTotal, Triple::cmp_head);
+
+	// These are copies of _trainList
+	for (INT i = 0; i < trainTotal; i++) {
+		trainList[i] = _trainList[i];
+	}
+	printf("The total of train triples is %ld.\n", trainTotal);
+
+	// Now it can sort! we have copied the original
+	std::sort(_trainList, _trainList + trainTotal, Triple::cmp_head);
 	tmp = trainTotal; trainTotal = 1;
-	trainHead[0] = trainTail[0] = trainRel[0] = trainList[0];
-	freqEnt[trainList[0].t] += 1;
-	freqEnt[trainList[0].h] += 1;
-	freqRel[trainList[0].r] += 1;
+
+	trainHead[0] = trainTail[0] = trainRel[0] = _trainList[0];
+	freqEnt[_trainList[0].t] += 1;
+	freqEnt[_trainList[0].h] += 1;
+	freqRel[_trainList[0].r] += 1;
+	// Function: Unique(_trainList) ->
+	//		and copy to trainHead, trainTail, trainRel
 	for (INT i = 1; i < tmp; i++)
-		if (trainList[i].h != trainList[i - 1].h || trainList[i].r != trainList[i - 1].r || trainList[i].t != trainList[i - 1].t) {
-			trainHead[trainTotal] = trainTail[trainTotal] = trainRel[trainTotal] = trainList[trainTotal] = trainList[i];
+		if (_trainList[i].h != _trainList[i - 1].h || _trainList[i].r != _trainList[i - 1].r || _trainList[i].t != _trainList[i - 1].t) {
+			trainHead[trainTotal] = trainTail[trainTotal] = trainRel[trainTotal] = _trainList[trainTotal] = _trainList[i];
 			trainTotal++;
-			freqEnt[trainList[i].t]++;
-			freqEnt[trainList[i].h]++;
-			freqRel[trainList[i].r]++;
+			freqEnt[_trainList[i].t]++;
+			freqEnt[_trainList[i].h]++;
+			freqRel[_trainList[i].r]++;
 		}
 
 	std::sort(trainHead, trainHead + trainTotal, Triple::cmp_head);
 	std::sort(trainTail, trainTail + trainTotal, Triple::cmp_tail);
 	std::sort(trainRel, trainRel + trainTotal, Triple::cmp_rel);
-	printf("The total of train triples is %ld.\n", trainTotal);
 
 	lefHead = (INT *)calloc(entityTotal, sizeof(INT));
 	rigHead = (INT *)calloc(entityTotal, sizeof(INT));
@@ -135,6 +147,33 @@ void importTrainFiles() {
 		left_mean[i] = freqRel[i] / left_mean[i];
 		right_mean[i] = freqRel[i] / right_mean[i];
 	}
+}
+
+extern "C"
+void reImportTrainFiles() {
+	cout << "Importing data from " << train_fname << endl;
+	int tmp;
+
+	FILE *fin = fopen((inPath + train_fname).c_str(), "r");
+	// Don't read trainTotal again! Only read upto prev trainTotal samples
+	INT maxSamples;
+	tmp = fscanf(fin, "%ld", &maxSamples);
+
+	//	trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
+	//	_trainList = (Triple *)calloc(trainTotal, sizeof(Triple));
+	// Triples will be overwritten onto arrays
+	for (INT i = 0; i < min(trainTotal, maxSamples); i++) {
+		tmp = fscanf(fin, "%ld", &_trainList[i].h);
+		tmp = fscanf(fin, "%ld", &_trainList[i].t);
+		tmp = fscanf(fin, "%ld", &_trainList[i].r);
+	}
+	fclose(fin);
+
+	// These are copies of _trainList
+	for (INT i = 0; i < trainTotal; i++) {
+		trainList[i] = _trainList[i];
+	}
+	printf("Updated %ld train triples.\n", min(trainTotal, maxSamples));
 }
 
 Triple *testList;

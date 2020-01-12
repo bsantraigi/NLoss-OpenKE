@@ -146,7 +146,7 @@ def ed_vs_bs(SamplerClass, plt_axis_ed, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
-    nbatches = 5
+    nbatches = 40
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
         print("\nTesting batch size", _bs)
@@ -202,7 +202,7 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 16000
+    bs_max = 20000
     step = 2500
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)

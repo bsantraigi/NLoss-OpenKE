@@ -127,7 +127,7 @@ class Config(object):
         self.trainFName = fname
 
     def re_read_train_file(self):
-        self.lib.importTrainFiles()
+        self.lib.reImportTrainFiles()
 
     def init(self):
         self.lib.setInPath(
@@ -437,13 +437,11 @@ class Config(object):
         bad_counts = 0
         for epoch in range(self.train_times):
             res = 0.0
-            if epoch > 0:
-                print()
-                # self.re_read_train_file()
             for batch in range(self.nbatches):
                 self.sampling(batch*self.batch_size)
                 loss = self.train_one_step()
                 res += loss
+
             print("Epoch %d | loss: %f" % (epoch, res))
             if (epoch + 1) % self.save_steps == 0:
                 print("Epoch %d has finished, saving..." % (epoch))
@@ -452,7 +450,8 @@ class Config(object):
             if callback is not None:
                 if (epoch + 1) % callback_steps == 0:
                     print("Callback >>")
-                    callback()
+                    callback()  # Regenerate minibatch samples
+                    self.re_read_train_file()  # Re-read file
 
             if (epoch + 1) % self.valid_steps == 0:
                 print("Epoch %d has finished, validating..." % (epoch))
