@@ -1,5 +1,4 @@
 from FastGraphSampler import *
-from graph_tool_rwr import graph_from_txt_format
 from timeit import default_timer as timer
 
 
