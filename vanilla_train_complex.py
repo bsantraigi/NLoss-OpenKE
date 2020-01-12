@@ -6,7 +6,7 @@ import benchmark_rwx
 from FastGraphSampler import *
 
 
-_SAMPLER_ = RWISG
+_SAMPLER_ = RWISG_NLoss
 BS = 800
 def resample_data(_data):
     data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
@@ -35,10 +35,10 @@ else:
     con.set_train_fname(f"train2id_{_SAMPLER_.__name__}.txt")
 
 con.set_work_threads(12)
-con.set_train_times(10000)
-con.set_nbatches(272115/15000)
+con.set_train_times(1000)
+con.set_nbatches(100)
 # con.set_nbatches(1)
-con.set_alpha(0.01)
+con.set_alpha(0.005)
 con.set_bern(0)
 if data=="FB15K237":
     con.set_dimension(200)
@@ -63,6 +63,5 @@ con.set_result_dir(f"./result/{data}")
 con.set_test_link(True)
 con.set_test_triple(True)
 con.init()
-# con.set_train_model(TransE)
-con.set_train_model(TransESoftLoss)
+con.set_train_model(ComplEx)
 con.train(callback=callback_sampler, callback_steps=5)

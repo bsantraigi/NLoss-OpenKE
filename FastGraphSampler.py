@@ -102,8 +102,8 @@ class FastGraphSampler:
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 15
-        self.stall_limit_reset = 15
+        self.stall_limit = 5
+        self.stall_limit_reset = 5
 
         self.g = g
         self.visited = np.zeros((self.g.num_vertices()))
@@ -119,7 +119,7 @@ class FastGraphSampler:
 
     def sample_initial_vertex(self):
         if np.sum(self.visited) == self.g.num_vertices():
-            print(f"+", end="")
+            print(f"+", end="", flush=True)
             self.visited = np.zeros((self.g.num_vertices()))
         vl = np.where(self.visited == 0)[0]
         v = self.g.vertex(np.random.choice(vl))
@@ -127,6 +127,7 @@ class FastGraphSampler:
             v = self.g.vertex(np.random.choice(vl))
         self.visited[int(v)] = 1
         self.minib_v.add(v)
+
         # v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
         # while v.out_degree() == 0:
         #     v = self.g.vertex(random.randint(0, self.g.num_vertices() - 1))
@@ -153,7 +154,7 @@ class FastGraphSampler:
                 # raise Exception(f"STALLED at {self.v}. {len(self.minib_v),len(self.minib_e)}")
                 if self.stall_limit == 0:
                     # print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
-                    print(f".", end="")
+                    print(f".", end="", flush=True)
 
                 self.v = self.sample_initial_vertex()
                 self.stall_limit = self.stall_limit_reset
@@ -202,7 +203,7 @@ class RW(FastGraphSampler):
 
     def _sample_single_nxt(self):
         nxt = self.v
-        n_list = list(self.v.out_neighbors())
+        n_list = list(self.v.all_neighbors())
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
@@ -218,6 +219,9 @@ class RWR(FastGraphSampler):
         assert 'restart_prob' in kwargs
         super(RWR, self).__init__(g)
         self.restart_prob = kwargs['restart_prob']
+
+        self.stall_limit = 40
+        self.stall_limit_reset = 40
 
     def _pack(self):
         self.batch_triples.append(len(self.minib_e))
@@ -239,7 +243,7 @@ class RWR(FastGraphSampler):
 
         nxt = self.v
         self.minib_v.add(nxt)
-        n_list = list(self.v.out_neighbors())
+        n_list = list(self.v.all_neighbors())
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
@@ -269,7 +273,7 @@ class RWISG(FastGraphSampler):
     def _sample_single_nxt(self):
         nxt = self.v
         self.minib_v.add(nxt)
-        n_list = list(self.v.out_neighbors())
+        n_list = list(self.v.all_neighbors())
         # if len(n_list) == 0:
         #     raise Exception("No edge to follow! @", self.v)
         while nxt == self.v:  # no self loop
@@ -288,6 +292,9 @@ class RWRISG(FastGraphSampler):
         assert 'restart_prob' in kwargs
         super(RWRISG, self).__init__(g)
         self.restart_prob = kwargs['restart_prob']
+
+        self.stall_limit = 40
+        self.stall_limit_reset = 40
 
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
@@ -308,7 +315,7 @@ class RWRISG(FastGraphSampler):
 
         nxt = self.v
         self.minib_v.add(nxt)
-        n_list = list(self.v.out_neighbors())
+        n_list = list(self.v.all_neighbors())
         while nxt == self.v:
             k = random.randint(0, len(n_list) - 1)
             nxt = n_list[k]
@@ -348,6 +355,9 @@ class RWISG_NLoss(FastGraphSampler):
     def __init__(self, g, **kwargs):
         super(RWISG_NLoss, self).__init__(g)
 
+        self.stall_limit = 15
+        self.stall_limit_reset = 15
+
     def _pack(self):
         vfilt = self.g.new_vertex_property('bool')
         for v in self.minib_v:
@@ -359,28 +369,27 @@ class RWISG_NLoss(FastGraphSampler):
         self.batch_triples.append(mini_g.num_edges())
 
         # Get edges
-        efilt = self.g.new_edge_property('bool')
-        for e in mini_g.edges():
-            efilt[e] = True
+        edge_stack = [mini_g.get_edges()]
 
+        # SLOW!!!
         for v in mini_g.vertices():
             neighbors_v = self.g.get_all_edges(v)
             np.random.shuffle(neighbors_v)
-            for y, z in neighbors_v[:20]:
-                efilt[self.g.edge(y, z)] = True
+            edge_stack.append(neighbors_v[:20])
 
         # for v in mini_g.vertices():
         #     for y, z in self.g.get_all_edges(v)[:20]:
         #         efilt[self.g.edge(y, z)] = True
 
-        mini_g = GraphView(self.g, efilt=efilt)
+        mini_g = Graph(directed=False)
+        mini_g.add_edge_list(np.concatenate(edge_stack))
         # print(f"reInduced MiniG: ({mini_g.num_vertices()}, {mini_g.num_edges()})")
         return mini_g
 
     def _sample_single_nxt(self):
         nxt = self.v
         self.minib_v.add(nxt)
-        n_list = list(self.v.out_neighbors())
+        n_list = list(self.v.all_neighbors())
         # if len(n_list) == 0:
         #     raise Exception("No edge to follow! @", self.v)
         while nxt == self.v:  # no self loop

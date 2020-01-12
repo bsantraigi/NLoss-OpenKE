@@ -5,22 +5,21 @@ import os
 import benchmark_rwx
 from FastGraphSampler import *
 
+# data = "FB15K237"
+data = "WN18RR"
+# data = "DB100K"
 
-_SAMPLER_ = RWISG
-BS = 800
+_SAMPLER_ = RWISG_NLoss
+BS = 100 if data == 'WN18RR' else 800
 def resample_data(_data):
     data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
 
     def method():
         data_gen(BS)
 
-    return None
-    # return method
+    # return None
+    return method
 
-
-data = "FB15K237"
-# data = "WN18RR"
-# data = "DB100K"
 
 callback_sampler = resample_data(data)
 
@@ -35,8 +34,8 @@ else:
     con.set_train_fname(f"train2id_{_SAMPLER_.__name__}.txt")
 
 con.set_work_threads(12)
-con.set_train_times(10000)
-con.set_nbatches(272115/15000)
+con.set_train_times(1000)
+con.set_nbatches(100)
 # con.set_nbatches(1)
 con.set_alpha(0.01)
 con.set_bern(0)
@@ -55,7 +54,7 @@ con.set_rel_neg_rate(0)
 # con.set_opt_method("SGD")
 con.set_opt_method("adagrad")
 con.set_save_steps(40)
-con.set_valid_steps(40)
+con.set_valid_steps(10)
 # con.set_valid_steps(40)
 con.set_early_stopping_patience(10)
 con.set_checkpoint_dir(f"./checkpoint/{data}")
@@ -63,6 +62,5 @@ con.set_result_dir(f"./result/{data}")
 con.set_test_link(True)
 con.set_test_triple(True)
 con.init()
-# con.set_train_model(TransE)
-con.set_train_model(TransESoftLoss)
+con.set_train_model(TransE)
 con.train(callback=callback_sampler, callback_steps=5)

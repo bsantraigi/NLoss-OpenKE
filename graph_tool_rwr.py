@@ -59,7 +59,7 @@ def ed_vs_bs(SamplerClass, plt_axis_ed, rng_start, rng_end, rng_step):
     nbatches = 40
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
-        print("\nTesting batch size", _bs)
+        print(f"\n[{SamplerClass.__name__}]Testing batch size", _bs)
         sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
         bs, ed, _hist = hist_n_stats(sampler, _bs, nbatches)
         print(bs, ed)

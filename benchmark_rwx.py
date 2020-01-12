@@ -10,27 +10,29 @@ def f7(seq):
 
 def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_name):
     outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
-
+    print(sampler_class.__name__, end=" ", flush=True)
     s = sampler_class(g, restart_prob=0.8, minib_size=bs)
 
     start = timer()
 
     target_size = g.num_edges()
     new_train = []
-    sampled_edges_undir = []
-    while len(new_train) < target_size:
-        minig = s.sample(bs)
-        for edge in minig.get_edges():
-            u, v = edge
-            new_train.append((u, v, random.choice(relations[(u, v)])))
-            sampled_edges_undir.append((u, v))
 
-    # end = timer()
+    L = 0
+    while L < target_size:
+        minig = s.sample(bs)
+        L += minig.num_edges()
+        new_train.append(minig.get_edges())
+
+    sampled_edges_undir = [(u, v) if (u, v) in relations
+                           else (v, u) for u, v in np.concatenate(new_train)]
+    new_train = [(u, v, random.choice(relations[(u, v)])) for u, v in sampled_edges_undir]
 
     remaining_edges = set(edges) - set(sampled_edges_undir)
 
     # print(f"Total triples before uniq: {len(new_train)}")
     # print(f"Total triples uniq: {len(f7(new_train))}")
+    # end = timer()
     # print(end - start, "sec")
 
     '''Stage 2
@@ -49,13 +51,14 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
     # print(f"Stage 2: Sample from remaining G({g.num_vertices()},{g.num_edges()})")
     s = sampler_class(g, restart_prob=0.8, minib_size=bs)
     new_train2 = []
-    while len(new_train2) < target_size:
+    L = 0
+    while L < target_size:
         minig = s.sample(bs)
-        for edge in minig.get_edges():
-            u, v = edge
-            new_train2.append((u, v, random.choice(relations[(u, v)])))
+        L += minig.num_edges()
+        new_train2.append(minig.get_edges())
 
-    end = timer()
+    new_train2 = [(u, v) if (u, v) in relations else (v, u) for (u, v) in np.concatenate(new_train2)]
+    new_train2 = [(u, v, random.choice(relations[(u, v)])) for u, v in new_train2]
 
     new_train += new_train2
 
@@ -64,6 +67,7 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
 
     # new_train = f7(new_train)[:target_size]
     remaining_triples = list(set(triples).difference(new_train))
+    end = timer()
     print(f"[{end - start:0.4} sec]: Total triples: {len(new_train)}, uniq: {len(f7(new_train))}")
 
     # Add the remaining
@@ -83,7 +87,7 @@ class Gen:
         self.data = data
         self.sampler = sampler
 
-    def __call__(self, bs=800):
+    def __call__(self, bs):
         generate_train_data(self.train_g,
                             self.train_relations,
                             self.train_edges,
@@ -94,7 +98,7 @@ class Gen:
 
 
 def main():
-    data = "FB15K237"
+    data = "DB100K"
 
     '''E[D] plots only
     '''
