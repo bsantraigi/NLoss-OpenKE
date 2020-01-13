@@ -6,7 +6,7 @@ import benchmark_rwx
 from FastGraphSampler import *
 
 
-_SAMPLER_ = RWISG_NLoss
+_SAMPLER_ = RWISG
 BS = 800
 def resample_data(_data):
     data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
@@ -14,13 +14,13 @@ def resample_data(_data):
     def method():
         data_gen(BS)
 
-    return None
-    # return method
+    # return None
+    return method
 
 
-data = "FB15K237"
+# data = "FB15K237"
 # data = "WN18RR"
-# data = "DB100K"
+data = "DB100K"
 
 callback_sampler = resample_data(data)
 

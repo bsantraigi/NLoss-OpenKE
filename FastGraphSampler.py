@@ -102,8 +102,8 @@ class FastGraphSampler:
         self.minib_v = set()
 
         # Stalling is edge based
-        self.stall_limit = 5
-        self.stall_limit_reset = 5
+        self.stall_limit = 15
+        self.stall_limit_reset = 15
 
         self.g = g
         self.visited = np.zeros((self.g.num_vertices()))

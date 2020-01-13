@@ -56,7 +56,7 @@ def ed_vs_bs(SamplerClass, plt_axis_ed, rng_start, rng_end, rng_step):
     bss = []
     eds = []
 
-    nbatches = 40
+    nbatches = 5
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
         print(f"\n[{SamplerClass.__name__}]Testing batch size", _bs)
@@ -100,7 +100,7 @@ if __name__=="__main__":
     # data = "DB100K"
     # train_g, train_relations = graph_from_dict_format(data)
 
-    data = "FB15K237"
+    data = "DB100K"
     train_g, train_relations, _, _ = graph_from_txt_format(data)
 
     print(train_g)
@@ -112,8 +112,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 20000
-    step = 2500
+    bs_max = 8100
+    step = 2000
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
@@ -121,15 +121,15 @@ if __name__=="__main__":
     print("================ RWR ==================")
     ed_vs_bs(RWR, ax, 30, bs_max, step)
 
-    bs_max = 1600
-    step = 300
+    bs_max = 1220
+    step = 200
     print("================ RWISG ==================")
     ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")
     ed_vs_bs(RWRISG, ax, 10, bs_max, step)
 
-    bs_max = 1600
-    step = 300
+    bs_max = 1220
+    step = 200
     print("================ RWISG_NLoss ==================")
     ed_vs_bs(RWISG_NLoss, ax, 10, bs_max, step)
 
