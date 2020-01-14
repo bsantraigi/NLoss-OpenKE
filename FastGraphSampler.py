@@ -155,7 +155,6 @@ class FastGraphSampler:
                 if self.stall_limit == 0:
                     # print(f"STALLED at {self.v}. {len(self.minib_v), len(self.minib_e)}")
                     print(f".", end="", flush=True)
-
                 self.v = self.sample_initial_vertex()
                 self.stall_limit = self.stall_limit_reset
 
@@ -204,9 +203,10 @@ class RW(FastGraphSampler):
     def _sample_single_nxt(self):
         nxt = self.v
         n_list = list(self.v.all_neighbors())
-        while nxt == self.v:
-            k = random.randint(0, len(n_list) - 1)
-            nxt = n_list[k]
+        # while nxt == self.v:
+        k = random.randint(0, len(n_list) - 1)
+        nxt = n_list[k]
+
         self.minib_e.add(self.g.edge(self.v, nxt))
         return nxt
 
@@ -244,9 +244,11 @@ class RWR(FastGraphSampler):
         nxt = self.v
         self.minib_v.add(nxt)
         n_list = list(self.v.all_neighbors())
-        while nxt == self.v:
-            k = random.randint(0, len(n_list) - 1)
-            nxt = n_list[k]
+        # while nxt == self.v:
+            # Infinite loop when v's only neighbor is v!
+        k = random.randint(0, len(n_list) - 1)
+        nxt = n_list[k] # This was inside the while loop
+
         self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
@@ -276,9 +278,10 @@ class RWISG(FastGraphSampler):
         n_list = list(self.v.all_neighbors())
         # if len(n_list) == 0:
         #     raise Exception("No edge to follow! @", self.v)
-        while nxt == self.v:  # no self loop
-            k = random.randint(0, len(n_list) - 1)
-            nxt = n_list[k]
+        # while nxt == self.v:  # no self loop
+        k = random.randint(0, len(n_list) - 1)
+        nxt = n_list[k]
+
         self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
@@ -316,9 +319,10 @@ class RWRISG(FastGraphSampler):
         nxt = self.v
         self.minib_v.add(nxt)
         n_list = list(self.v.all_neighbors())
-        while nxt == self.v:
-            k = random.randint(0, len(n_list) - 1)
-            nxt = n_list[k]
+        # while nxt == self.v:
+        k = random.randint(0, len(n_list) - 1)
+        nxt = n_list[k]
+
         self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt
@@ -392,9 +396,10 @@ class RWISG_NLoss(FastGraphSampler):
         n_list = list(self.v.all_neighbors())
         # if len(n_list) == 0:
         #     raise Exception("No edge to follow! @", self.v)
-        while nxt == self.v:  # no self loop
-            k = random.randint(0, len(n_list) - 1)
-            nxt = n_list[k]
+        # while nxt == self.v:  # no self loop
+        k = random.randint(0, len(n_list) - 1)
+        nxt = n_list[k]
+
         self.minib_e.add(self.g.edge(self.v, nxt))
 
         return nxt

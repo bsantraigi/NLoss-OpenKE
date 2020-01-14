@@ -1,5 +1,8 @@
 from FastGraphSampler import *
 from timeit import default_timer as timer
+from collections import Counter
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def f7(seq):
@@ -9,7 +12,6 @@ def f7(seq):
 
 
 def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_name):
-    outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
     print(sampler_class.__name__, end=" ", flush=True)
     s = sampler_class(g, restart_prob=0.8, minib_size=bs)
 
@@ -47,7 +49,8 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
     #     if e is not None:
     #         g.remove_edge(e)
 
-    target_size = g.num_edges()
+    target_size = g.num_edges() # 2* is causing heavy oversampling
+
     # print(f"Stage 2: Sample from remaining G({g.num_vertices()},{g.num_edges()})")
     s = sampler_class(g, restart_prob=0.8, minib_size=bs)
     new_train2 = []
@@ -68,11 +71,17 @@ def generate_train_data(g, relations, edges, triples, sampler_class, bs, data_na
     # new_train = f7(new_train)[:target_size]
     remaining_triples = list(set(triples).difference(new_train))
     end = timer()
-    print(f"[{end - start:0.4} sec]: Total triples: {len(new_train)}, uniq: {len(f7(new_train))}")
+    print(f"[{end - start:0.4} sec]: Total triples: {len(new_train)}, uniq: {len(f7(new_train))}, remains: {len(remaining_triples)}")
 
     # Add the remaining
     new_train = new_train + remaining_triples
 
+    # write_to_file(data_name, new_train, sampler_class)
+    return new_train
+
+
+def write_to_file(data_name, new_train, sampler_class):
+    outFile = open(f'./benchmarks/{data_name}/train2id_{sampler_class.__name__}.txt', 'w')
     outFile.write(f"{len(new_train)}\n")
     for t in new_train:
         outFile.write(f"{t[0]} {t[1]} {t[2]}\n")
@@ -88,23 +97,68 @@ class Gen:
         self.sampler = sampler
 
     def __call__(self, bs):
-        generate_train_data(self.train_g,
-                            self.train_relations,
-                            self.train_edges,
-                            self.train_triples,
-                            self.sampler,
-                            bs,
-                            self.data)
+        """
+        Gets samples for the whole dataset and
+        :param bs:
+        :return:
+        """
+        new_train = generate_train_data(self.train_g,
+                                        self.train_relations,
+                                        self.train_edges,
+                                        self.train_triples,
+                                        self.sampler,
+                                        bs,
+                                        self.data)
+        write_to_file(self.data, new_train, self.sampler)
+
+    def get_sampled_data(self, bs):
+        return generate_train_data(self.train_g,
+                                   self.train_relations,
+                                   self.train_edges,
+                                   self.train_triples,
+                                   self.sampler,
+                                   bs,
+                                   self.data)
 
 
-def main():
-    data = "DB100K"
+def main(data, sampler_class, bs):
+
 
     '''E[D] plots only
     '''
-    data_gen = Gen(data, RWISG)
-    data_gen(800)
+    data_gen = Gen(data, sampler_class)
+    new_train = data_gen.get_sampled_data(bs)
+
+    triple_count = Counter(new_train)
+    print(f"{len(triple_count)} triples in list")
+
+    fig, ax = plt.subplots()
+    ax.plot(sorted(triple_count.values(), reverse=True))
+    ax.set(xlabel="Ranked triple", ylabel="Repetition Count", yscale="log",
+           title=f"Sampling Algorithm: {data_gen.sampler.__name__}/{data}/BS_{bs}")
+    ax.set_ylim(top=100)
+    fig.savefig(f"plots/oversampling/{data}_{data_gen.sampler.__name__}_BS_{bs}.svg")
 
 
 if __name__=="__main__":
-    main()
+    # main(data="WN18RR", sampler_class=RWISG_NLoss, bs=300)
+    # main(data="FB15K237", sampler_class=RWISG_NLoss, bs=300)
+    # main(data="DB100K", sampler_class=RWISG_NLoss, bs=300)
+    #
+    # main(data="WN18RR", sampler_class=RWISG, bs=300)
+    # main(data="FB15K237", sampler_class=RWISG, bs=300)
+    # main(data="DB100K", sampler_class=RWISG, bs=300)
+    #
+    # main(data="WN18RR", sampler_class=RWRISG, bs=300)
+    # main(data="FB15K237", sampler_class=RWRISG, bs=300)
+    # main(data="DB100K", sampler_class=RWRISG, bs=300)
+
+    main(data="WN18RR", sampler_class=RWR, bs=2500)
+    main(data="FB15K237", sampler_class=RWR, bs=2500)
+    main(data="DB100K", sampler_class=RWR, bs=2500)
+
+    main(data="WN18RR", sampler_class=RW, bs=300)
+    main(data="FB15K237", sampler_class=RW, bs=300)
+    main(data="DB100K", sampler_class=RW, bs=300)
+
+
