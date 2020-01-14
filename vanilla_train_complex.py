@@ -6,8 +6,8 @@ import benchmark_rwx
 from FastGraphSampler import *
 
 
-_SAMPLER_ = RWISG
-BS = 800
+_SAMPLER_ = RWISG_NLoss
+BS = 1000
 def resample_data(_data):
     data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
 
@@ -58,10 +58,10 @@ con.set_save_steps(40)
 con.set_valid_steps(40)
 # con.set_valid_steps(40)
 con.set_early_stopping_patience(10)
-con.set_checkpoint_dir(f"./checkpoint/{data}")
-con.set_result_dir(f"./result/{data}")
+con.set_checkpoint_dir(f"./checkpoint/{data}_{_SAMPLER_.__name__}")
+con.set_result_dir(f"./result/{data}_{_SAMPLER_.__name__}")
 con.set_test_link(True)
 con.set_test_triple(True)
 con.init()
 con.set_train_model(ComplEx)
-con.train(callback=callback_sampler, callback_steps=5)
+con.train(callback=callback_sampler, callback_steps=10)

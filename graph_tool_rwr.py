@@ -53,25 +53,29 @@ def hist_n_stats(sampler, minib_size, nbatches):
 
 
 def ed_vs_bs(SamplerClass, plt_axis_ed, rng_start, rng_end, rng_step):
-    bss = []
+    edge_bss = []
     eds = []
+    v_bss = []
 
     nbatches = 5
     rp = 0.8
     for _bs in np.arange(rng_start, rng_end, rng_step):
+        v_bss.append(_bs)
         print(f"\n[{SamplerClass.__name__}]Testing batch size", _bs)
         sampler = SamplerClass(train_g, minib_size=_bs, restart_prob=rp)
         bs, ed, _hist = hist_n_stats(sampler, _bs, nbatches)
         print(bs, ed)
 
-        bss.append(bs)
+        edge_bss.append(bs)
         eds.append(ed)
 
     # Plot the last hist for now. May require to plot for
     # particular batch size later!
 
     print(f"Restart Prob was {rp}.")
-    plt_axis_ed.plot(bss, eds, marker='x')
+    plt_axis_ed.plot(edge_bss, eds, marker='x')
+    for bs, ed, vn in zip(edge_bss, eds, v_bss):
+        plt_axis_ed.annotate(str(vn), xy=(bs, ed))
     plt_axis_ed.set(xlabel="Batch Size (Number of triples)", ylabel="E[D] of Minibatch Graph",
                     title=f"Expected Degree of Minibatch Graphs ({data})")
 
@@ -97,7 +101,7 @@ def pencil(SamplerClass, tag, minib_size):
 
 
 if __name__=="__main__":
-    # data = "DB100K"
+    # data = "WN18RR"
     # train_g, train_relations = graph_from_dict_format(data)
 
     data = "DB100K"
@@ -112,8 +116,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 8100
-    step = 2000
+    bs_max = 1200
+    step = 250
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
@@ -121,15 +125,15 @@ if __name__=="__main__":
     print("================ RWR ==================")
     ed_vs_bs(RWR, ax, 30, bs_max, step)
 
-    bs_max = 1220
+    bs_max = 620
     step = 200
     print("================ RWISG ==================")
     ed_vs_bs(RWISG, ax, 10, bs_max, step)
     print("================ RWRISG ==================")
     ed_vs_bs(RWRISG, ax, 10, bs_max, step)
 
-    bs_max = 1220
-    step = 200
+    # bs_max = 1220
+    # step = 200
     print("================ RWISG_NLoss ==================")
     ed_vs_bs(RWISG_NLoss, ax, 10, bs_max, step)
 
