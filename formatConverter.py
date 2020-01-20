@@ -3,8 +3,9 @@ import os
 entities = {}
 relations = {}
 
-src = "entities.dict"
-trg = "entity2id.txt"
+folder = "benchmarks/yago2/"
+src = f"{folder}/entities.dict"
+trg = f"{folder}/entity2id.txt"
 items = []
 with open(src) as f_src:
     for line in f_src:
@@ -17,8 +18,8 @@ with open(trg, "w") as f_trg:
         f_trg.write(f"{item[1]} {item[0]}\n")
 
 
-src = "relations.dict"
-trg = "relation2id.txt"
+src = f"{folder}/relations.dict"
+trg = f"{folder}/relation2id.txt"
 items = []
 with open(src) as f_src:
     for line in f_src:
@@ -45,6 +46,6 @@ def convertTriples(src,trg):
             f_trg.write(f"{entities[item[0]]} {entities[item[2]]} {relations[item[1]]}\n")
 
 
-convertTriples("train.txt", "train2id.txt")
-convertTriples("test.txt", "test2id.txt")
-convertTriples("valid.txt", "valid2id.txt")
+convertTriples(f"{folder}/train.txt", f"{folder}/train2id.txt")
+convertTriples(f"{folder}/test.txt", f"{folder}/test2id.txt")
+convertTriples(f"{folder}/valid.txt", f"{folder}/valid2id.txt")
