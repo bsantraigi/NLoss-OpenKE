@@ -6,11 +6,12 @@ import benchmark_rwx
 from FastGraphSampler import *
 
 # data = "FB15K237"
-data = "WN18RR"
+# data = "WN18RR"
 # data = "DB100K"
+data = "yago2"
 
-_SAMPLER_ = RWR
-BS = 1400 if data == 'WN18RR' else 800
+_SAMPLER_ = RWISG_NLoss
+BS = 1400
 def resample_data(_data):
     data_gen = benchmark_rwx.Gen(_data, _SAMPLER_)
 
@@ -34,9 +35,9 @@ else:
     con.set_train_fname(f"train2id_{_SAMPLER_.__name__}.txt")
 
 con.set_work_threads(12)
-con.set_train_times(250)
-con.set_nbatches(4000)
-con.set_alpha(0.004)
+con.set_train_times(1000)
+con.set_nbatches(400)
+con.set_alpha(0.01)
 con.set_bern(0)
 if data == "WN18RR":
     con.set_dimension(500)
@@ -64,4 +65,4 @@ con.set_test_link(True)
 con.set_test_triple(True)
 con.init()
 con.set_train_model(DistMult)
-con.train(callback=callback_sampler, callback_steps=10)
+con.train(callback=callback_sampler, callback_steps=15)

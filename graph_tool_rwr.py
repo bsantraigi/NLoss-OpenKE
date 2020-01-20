@@ -104,7 +104,7 @@ if __name__=="__main__":
     # data = "WN18RR"
     # train_g, train_relations = graph_from_dict_format(data)
 
-    data = "DB100K"
+    data = "FB15K237"
     train_g, train_relations, _, _ = graph_from_txt_format(data)
 
     print(train_g)
@@ -116,8 +116,8 @@ if __name__=="__main__":
 
     fig, ax = plt.subplots()
 
-    bs_max = 1200
-    step = 250
+    bs_max = 1650
+    step = 400
     print("================ SIMPLY RANDOM ==================")
     ed_vs_bs(SimplyRandom, ax, 30, bs_max, step)
     print("================ RW ==================")
